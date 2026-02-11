@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   BrainCircuit, CheckCircle2, Loader2, ChevronDown, ChevronUp, 
@@ -15,16 +14,18 @@ const ThinkingStepRow: React.FC<ThinkingStepItemProps> = ({ step, onFileClick })
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   return (
-    <div className="relative pl-6 pb-6 last:pb-0">
+    <div className="relative pl-6 pb-6 last:pb-0 group/row">
       {/* Timeline line */}
-      <div className="absolute left-[9px] top-2 bottom-0 w-0.5 bg-slate-100 group-last:hidden"></div>
+      <div className="absolute left-[9px] top-2 bottom-0 w-0.5 bg-slate-100 group-last/row:hidden"></div>
       
       {/* Status indicator */}
-      <div className={`absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center border-2 z-10 ${
+      <div className={`absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center border-2 z-10 transition-all ${
         step.status === 'completed' ? 'bg-emerald-50 border-emerald-300 text-emerald-600' : 
-        step.status === 'active' ? 'bg-indigo-600 border-indigo-600 text-white animate-pulse' : 'bg-white border-slate-200 text-slate-400'
+        step.status === 'active' ? 'bg-indigo-600 border-indigo-600 text-white animate-pulse' : 
+        step.status === 'failed' ? 'bg-rose-50 border-rose-300 text-rose-600' : 'bg-white border-slate-200 text-slate-400'
       }`}>
-        {step.status === 'active' ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />}
+        {step.status === 'active' ? <Loader2 size={10} className="animate-spin" /> : 
+         step.status === 'completed' ? <CheckCircle2 size={10} /> : <Activity size={10} />}
       </div>
 
       <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 hover:border-indigo-200 hover:bg-white transition-all group/item shadow-sm">
@@ -88,9 +89,12 @@ const ThinkingProcess: React.FC<{ steps: ThinkingStep[]; onFileClick?: (path: st
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 block">思维逻辑链条 (Chain of Thought)</span>
-              {isActive && <div className="px-2 py-0.5 bg-indigo-100 text-indigo-600 text-[9px] font-black rounded-full animate-pulse uppercase">分析中...</div>}
+              {isActive && <div className="px-2 py-0.5 bg-indigo-100 text-indigo-600 text-[9px] font-black rounded-full animate-pulse uppercase">编排中...</div>}
             </div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{steps.length} 个逻辑节点已就绪</span>
+            {/* Show summarized activity even when collapsed */}
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+              {steps[steps.length - 1].content}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">

@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { 
   Send, Bot, Sparkles, RefreshCw, Loader2, 
   Braces, ListChecks, CheckCircle, Split, 
@@ -26,10 +25,17 @@ const PlanView: React.FC<{
   onToggleFold: (id: string) => void;
   onToggleStep: (id: string, stepId: string) => void;
   onConfirm: (plan: Plan) => void;
-}> = ({ plan, msgId, isAwaitingApproval, onToggleFold, onToggleStep, onConfirm }) => {
+}> = memo(({ plan, msgId, isAwaitingApproval, onToggleFold, onToggleStep, onConfirm }) => {
+  const [localCollapsed, setLocalCollapsed] = useState(plan.isCollapsed ?? false);
+
+  const toggle = () => {
+    setLocalCollapsed(!localCollapsed);
+    if (onToggleFold) onToggleFold(msgId);
+  };
+
   return (
-    <div className="w-full bg-white border border-indigo-100 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500 border-2">
-      <div onClick={() => onToggleFold(msgId)} className="flex items-center justify-between px-7 py-5 cursor-pointer hover:bg-slate-50 transition-colors border-b border-indigo-50 bg-indigo-50/30">
+    <div className="w-full bg-white border border-indigo-100 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-500 border-2 my-4">
+      <div onClick={toggle} className="flex items-center justify-between px-7 py-5 cursor-pointer hover:bg-slate-50 transition-colors border-b border-indigo-50 bg-indigo-50/30">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg">
               <ListChecks size={20} />
@@ -39,9 +45,9 @@ const PlanView: React.FC<{
               <span className="text-[10px] text-indigo-600 font-bold uppercase">{plan.steps.length} 阶段编排就绪</span>
             </div>
           </div>
-          {plan.isCollapsed ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronUp size={18} className="text-slate-400" />}
+          {localCollapsed ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronUp size={18} className="text-slate-400" />}
       </div>
-      {!plan.isCollapsed && (
+      {!localCollapsed && (
         <div className="p-7">
           <div className="space-y-4">
             {plan.steps.map(s => (
@@ -81,7 +87,7 @@ const PlanView: React.FC<{
                  <p className="text-[11px] font-bold text-indigo-800">当前任务处于挂起状态。您可以手动勾选步骤进行授权，或在下方输入补充调整建议来优化此计划。</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => onConfirm(plan)} className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl flex items-center justify-center gap-2"><CheckCircle size={16} /> 确认并开始执行</button>
+                <button onClick={() => onConfirm(plan)} className="w-full bg-slate-900 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl flex items-center justify-center gap-2"><CheckCircle size={16} /> 确认并开始执行</button>
               </div>
             </div>
           )}
@@ -89,7 +95,7 @@ const PlanView: React.FC<{
       )}
     </div>
   );
-};
+});
 
 const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
   const [input, setInput] = useState('');
@@ -116,6 +122,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
     
     const handleVfsUpdate = (e: any) => { 
       setVfs(e.detail); 
+      // Auto-switch to workspace if a file is being written for the first time
       setShowWorkspace(true); 
     };
     window.addEventListener('vfs-updated', handleVfsUpdate);
@@ -230,25 +237,21 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
           try {
             const parsed = JSON.parse(content);
             if (parsed.plan) {
-              // Ensure steps have necessary UI fields
               parsed.plan.steps = (parsed.plan.steps || []).map((s: any) => ({
                 ...s,
                 approved: s.approved ?? !s.requiresApproval,
                 isAutoApproved: s.isAutoApproved ?? !s.requiresApproval
               }));
               
-              // We pass a dummy message ID or context if it's purely text-based
               return (
-                <div className="my-4">
-                  <PlanView 
-                    plan={parsed.plan} 
-                    msgId="text-plan" 
-                    isAwaitingApproval={false} 
-                    onToggleFold={() => {}} 
-                    onToggleStep={() => {}} 
-                    onConfirm={() => {}} 
-                  />
-                </div>
+                <PlanView 
+                  plan={parsed.plan} 
+                  msgId="text-plan" 
+                  isAwaitingApproval={false} 
+                  onToggleFold={() => {}} 
+                  onToggleStep={() => {}} 
+                  onConfirm={() => {}} 
+                />
               );
             }
           } catch (e) { return <div className="p-4 bg-slate-50 border rounded-xl animate-pulse text-xs font-bold text-slate-400">正在解析任务编排矩阵...</div>; }
