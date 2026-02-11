@@ -1,6 +1,6 @@
 {
   "name": "Enterprise Agentic System Orchestrator",
-  "description": "A comprehensive enterprise-level AI agent platform implementing Supervisor patterns, Semantic Chunking, and Chain-of-Thought visualization based on Spring Boot & Java 17 architectural principles.",
+  "description": "A comprehensive enterprise-level AI agent platform implementing Supervisor patterns, Semantic Chunking, and Chain-of-Thought visualization built with React 19, TypeScript, Vite, and Gemini API.",
   "requestFramePermissions": [
     "camera",
     "microphone"

@@ -1,26 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise Agentic Orchestrator</title>
+    <!-- Tailwind CDN: 开发环境使用。生产环境请执行 npm install 后用 PostCSS 构建 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
-        .markdown-body th { background: #f8fafc; text-align: left; padding: 0.75rem; border: 1px solid #e2e8f0; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; }
-        .markdown-body td { padding: 0.75rem; border: 1px solid #e2e8f0; }
-        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin: 1rem 0; }
-        .markdown-body p { margin: 0.75rem 0; }
-        .markdown-body h2 { font-size: 1.25rem; font-weight: 800; margin-top: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; }
-    </style>
 <script type="importmap">
 {
   "imports": {
@@ -37,5 +23,6 @@
 </head>
 <body class="bg-slate-50 text-slate-900 overflow-hidden">
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

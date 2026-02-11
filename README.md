@@ -1,20 +1,22 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Enterprise Agentic System Orchestrator
 
-# Run and deploy your AI Studio app
+基于 Gemini API 的企业级 AI Agent 编排平台，实现 Supervisor 模式、语义分块与 Chain-of-Thought 可视化。
 
-This contains everything you need to run your app locally.
+## 快速开始
 
-View your app in AI Studio: https://ai.studio/apps/drive/16KCunMhbrTeTTURwMjkYplnawbtcw7jc
+1. 安装依赖：`npm install`
+2. 配置 `.env.local`：设置 `GEMINI_API_KEY`
+3. 启动：`npm run dev`
+4. 访问：http://localhost:3000
 
-## Run Locally
+## 样式说明
 
-**Prerequisites:**  Node.js
+- **开发环境**：使用 Tailwind CDN，样式开箱即用
+- **生产环境**：建议执行 `npm install` 安装 `tailwindcss`、`postcss`、`autoprefixer`，使用 PostCSS 构建以优化体积并消除 CDN 警告
 
+## 构建
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm run build
+npm run preview  # 预览构建结果
+```

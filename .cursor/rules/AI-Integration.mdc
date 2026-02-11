@@ -1,0 +1,27 @@
+---
+description: Gemini API、工具定义与 Agent 集成规范
+globs: "**/geminiService.ts","**/services/*.ts"
+alwaysApply: false
+---
+
+# AI 集成规范
+
+## Gemini API
+- 使用 `@google/genai` 的 `GoogleGenAI` 与 `generateContent`
+- API Key 从 `process.env.API_KEY` 或 `.env.local` 的 `GEMINI_API_KEY` 读取
+- 流式/长任务需处理 `429` 限流：实现 `retryWithBackoff` 指数退避
+
+## 工具注册表（TOOL_REGISTRY）
+- 每个工具包含 `definition`（FunctionDeclaration）和 `executor`
+- `definition` 需明确 `name`、`description`、`parameters`（type、properties、required）
+- `executor` 签名：`(args, sessionId, onProgress?) => Promise<any> | any`
+
+## 计划与确认
+- 多步骤任务必须先调用 `propose_plan`，获得用户确认后再执行写操作
+- 计划步骤包含：`id`、`task`、`requiresApproval`、`parallel`、`status`
+- 需审批步骤由 `isAwaitingApproval` 状态驱动 UI
+
+## 思考过程
+- `ThinkingStep` 需包含 `agentId`、`agentName`、`content`、`status`、`timestamp`
+- 支持 `pending` | `active` | `completed` | `failed` 状态流转
+- 前端通过 `ThinkingProcess` 组件展示

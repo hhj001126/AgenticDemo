@@ -21,7 +21,9 @@ export interface ThinkingStep {
   status: 'pending' | 'active' | 'completed' | 'failed';
   timestamp: number;
   group?: string; // Used for grouping parallel tasks
-  fileLink?: string; // Optional link to a VFS file
+  fileLink?: string; // Optional link to a VFS file (deprecated, use fileLinks)
+  fileLinks?: string[]; // Multiple file links for write_file operations
+  fileStreamState?: Record<string, { progress: string; isWriting: boolean }>; // Per-file streaming state
 }
 
 export interface PlanStep {
@@ -64,9 +66,10 @@ export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   thinkingSteps?: ThinkingStep[];
+  writtenFiles?: string[]; // 正文中写入的文件列表（供正文区域展示）
   isThinkingCollapsed?: boolean; // UI state
   plan?: Plan;
-  chartData?: ChartData;
+  charts?: ChartData[]; // 正文内联多图表（按 [CHART] 占位符顺序）
   timestamp: number;
   feedback?: 'like' | 'dislike';
   isAwaitingApproval?: boolean;

@@ -65,10 +65,10 @@ export const agentStateService = {
     localStorage.removeItem(STORAGE_KEY_ACTIVE);
   },
 
-  updateVfs: (sessionId: string, path: string, content: string, language: string) => {
+  updateVfs: (sessionId: string, path: string, content: string, language: string, isWriting?: boolean) => {
     const session = agentStateService.getSession(sessionId);
     if (!session) return;
-    const newVfs = { ...session.vfs, [path]: { path, content, language } };
+    const newVfs = { ...session.vfs, [path]: { path, content, language, isWriting: isWriting ?? false } };
     agentStateService.saveSession(sessionId, { vfs: newVfs });
     window.dispatchEvent(new CustomEvent('vfs-updated', { detail: newVfs }));
   },

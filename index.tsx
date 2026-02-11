@@ -1,4 +1,4 @@
-
+import './index.css'; // 自定义样式（滚动条、markdown、动画等）
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

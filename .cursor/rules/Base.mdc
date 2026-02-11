@@ -1,0 +1,26 @@
+---
+description: 项目基础约定与技术栈
+alwaysApply: true
+---
+
+# AgenticDemo 项目基础
+
+## 技术栈
+- **框架**：React 19 + TypeScript
+- **构建**：Vite 6
+- **AI**：@google/genai（Gemini API）
+- **UI**：lucide-react、react-markdown、remark-gfm
+
+## 目录约定
+- `components/` — React 组件，按功能命名（如 AgentChat、ThinkingProcess）
+- `services/` — 业务逻辑与 API 调用（agentStateService、geminiService）
+- `types.ts` — 共享类型（Industry、AgentMode、Message、Plan、ChartData 等）
+
+## 核心模式
+- 函数式组件 + Hooks，复杂列表使用 `memo`
+- 状态持久化：`localStorage`（如 `agent_orchestrator_app_state`）
+- 敏感配置：`.env.local` 中 `GEMINI_API_KEY`
+
+## 风格
+- Tailwind 类名，indigo 主色，圆角 `rounded-2xl`、阴影 `shadow-xl`
+- 响应式优先，避免硬编码尺寸

@@ -1,0 +1,35 @@
+---
+description: React 与 TypeScript 开发规范
+globs: "**/*.ts","**/*.tsx"
+alwaysApply: false
+---
+
+# React & TypeScript 规范
+
+## TypeScript
+- 优先使用 `interface` 定义组件 props，避免 `any`
+- 共享类型放在 `types.ts`，组件私有类型可内联
+- 异步函数明确返回 `Promise<T>`，错误用 `try/catch` 或显式处理
+
+## React 组件
+- 函数组件 + Hooks，类组件不再使用
+- Props 显式声明：`interface XProps { ... }`
+- 子组件拆分：超过 80 行或复用度高时提取到独立文件
+- 列表渲染：大列表使用 `memo` 或 `React.memo` 包裹子项
+
+## 示例
+
+```tsx
+// ✅ GOOD：显式 props、类型安全
+interface AgentChatProps { industry: Industry; mode: AgentMode; }
+const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => { ... }
+
+// ❌ BAD：any、隐式类型
+const AgentChat = (props: any) => { ... }
+```
+
+## 导入顺序
+1. React
+2. 第三方库（lucide-react、react-markdown 等）
+3. 项目内模块（相对路径 `../types`、`../services`）
+4. 类型仅导入时使用 `import type`
