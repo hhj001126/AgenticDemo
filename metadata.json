@@ -1,0 +1,8 @@
+{
+  "name": "Enterprise Agentic System Orchestrator",
+  "description": "A comprehensive enterprise-level AI agent platform implementing Supervisor patterns, Semantic Chunking, and Chain-of-Thought visualization based on Spring Boot & Java 17 architectural principles.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
