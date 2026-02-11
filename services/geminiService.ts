@@ -1,9 +1,7 @@
 
 import { GoogleGenAI, Type, FunctionDeclaration, Part } from "@google/genai";
-import { Industry, ThinkingStep } from "../types";
+import { Industry, ThinkingStep, Plan, ChartData } from "../types";
 import { agentStateService } from "./agentStateService";
-
-// --- 1. Infrastructure Layer: Reliability & Configuration ---
 
 async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   let delay = 1000;
@@ -11,16 +9,9 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promis
     try {
       return await fn();
     } catch (error: any) {
-      const isQuotaError = 
-        error?.status === 429 || 
-        error?.message?.includes('429') || 
-        error?.message?.includes('RESOURCE_EXHAUSTED');
-      
-      if (isQuotaError && i < maxRetries - 1) {
-        console.warn(`Quota reached, retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 2;
-        continue;
+      if ((error?.status === 429 || error?.message?.includes('429')) && i < maxRetries - 1) {
+        await new Promise(res => setTimeout(res, delay));
+        delay *= 2; continue;
       }
       throw error;
     }
@@ -28,341 +19,347 @@ async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promis
   return await fn();
 }
 
-// --- 2. Tooling Layer: MCP Simulation ---
-
-const runSubAgent = async (role: string, task: string, context: string = "") => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const response = await retryWithBackoff(() => ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `
-      SYSTEM_INSTRUCTION: You are a specialized Sub-Agent with the role: "${role}".
-      YOUR TASK: ${task}
-      CONTEXT_DATA: ${context}
-      
-      Output strictly the result of the task. Be professional and concise.
-    `,
-  }));
-  return response.text || "";
-};
-
-const TOOL_REGISTRY: Record<string, { definition: FunctionDeclaration, executor: (args: any) => Promise<any> | any }> = {
+const TOOL_REGISTRY: Record<string, { definition: FunctionDeclaration, executor: (args: any, sessionId: string, onProgress?: (content: string) => void) => Promise<any> | any }> = {
   get_current_date: {
-    definition: {
-      name: "get_current_date",
-      description: "获取系统当前标准时间。",
-      parameters: { type: Type.OBJECT, properties: {} }
-    },
-    executor: () => ({ 
-      iso: new Date().toISOString(), 
-      weekday: new Date().toLocaleDateString('zh-CN', { weekday: 'long' }) 
-    })
+    definition: { name: "get_current_date", description: "获取当前系统时间。", parameters: { type: Type.OBJECT, properties: {} } },
+    executor: () => ({ iso: new Date().toISOString() })
   },
-  get_sales_performance: {
+  analyze_requirements: {
     definition: {
-      name: "get_sales_performance",
-      description: "查询年度销售业绩数据。",
-      parameters: {
-        type: Type.OBJECT,
-        properties: { year: { type: Type.STRING, description: "年份 (e.g., '2024')" } },
-        required: ["year"]
-      }
-    },
-    executor: (args) => ({
-      year: args.year,
-      source: "Enterprise_ERP",
-      data: [
-        { name: "张伟", customers: 45, revenue: 1200000, region: "华北" },
-        { name: "李娜", customers: 38, revenue: 950000, region: "华东" },
-        { name: "王强", customers: 52, revenue: 1450000, region: "华南" }
-      ]
-    })
-  },
-  query_enterprise_kb: {
-    definition: {
-      name: "query_enterprise_kb",
-      description: "RAG 检索企业内部知识库（合规、技术文档）。",
-      parameters: {
-        type: Type.OBJECT,
-        properties: { 
-          query: { type: Type.STRING, description: "语义搜索关键词" }
-        },
-        required: ["query"]
-      }
-    },
-    executor: (args) => ({
-      query: args.query,
-      results: [
-        { title: "2025合规手册", content: "根据第3章，涉及跨境营收的项目必须进行二次税务审计以确保合规性。" },
-        { title: "项目Alpha规划", content: "项目Alpha预期ROI为12.5%，当前处于二期阶段。" }
-      ]
-    })
-  },
-  delegate_sub_agent: {
-    definition: {
-      name: "delegate_sub_agent",
-      description: "将任务委派给具有特定角色的子 Agent。",
+      name: "analyze_requirements",
+      description: "对复杂需求进行深度分析，提取核心约束、业务逻辑点和实施建议。适用于所有政企领域。",
       parameters: {
         type: Type.OBJECT,
         properties: {
-          role: { type: Type.STRING, description: "角色 (e.g., 'Legal_Auditor')" },
-          task: { type: Type.STRING, description: "具体任务" },
-          context: { type: Type.STRING, description: "背景上下文" }
+          context: { type: Type.STRING, description: "需要分析的需求原始文本" },
+          domain: { type: Type.STRING, description: "当前业务领域(如：财务、法律、技术等)" }
         },
-        required: ["role", "task"]
+        required: ["context", "domain"]
       }
     },
     executor: async (args) => {
-      const output = await runSubAgent(args.role, args.task, args.context);
-      return { output };
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `你是一个跨领域的政企高级顾问。请针对以下需求背景在[${args.domain}]领域内进行深度逻辑拆解和实施方案建议：\n\n${args.context}`,
+      });
+      return { analysis: response.text, status: "COMPLETED" };
     }
   },
-  calculate_roi: {
+  propose_plan: {
     definition: {
-      name: "calculate_roi",
-      description: "金融投资回报率计算工具。",
+      name: "propose_plan",
+      description: "当任务较为复杂或涉及敏感操作时，向用户提议一个多步骤执行计划。执行将在此步骤暂停，等待用户确认。",
       parameters: {
         type: Type.OBJECT,
         properties: {
-          investment: { type: Type.NUMBER },
-          returns: { type: Type.NUMBER }
+          title: { type: Type.STRING, description: "计划标题" },
+          steps: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                task: { type: Type.STRING },
+                requiresApproval: { type: Type.BOOLEAN },
+                parallel: { type: Type.BOOLEAN }
+              },
+              required: ["id", "task", "requiresApproval", "parallel"]
+            }
+          }
         },
-        required: ["investment", "returns"]
+        required: ["title", "steps"]
       }
     },
-    executor: (args) => ({ 
-      roi_percentage: ((args.returns - args.investment) / args.investment * 100).toFixed(2),
-      status: "CALCULATED"
-    })
+    executor: async (args) => {
+      // Mark steps that don't need approval as auto-approved
+      const steps = (args.steps || []).map((s: any) => ({ 
+        ...s, 
+        approved: !s.requiresApproval,
+        isAutoApproved: !s.requiresApproval 
+      }));
+      return { ...args, steps, isApproved: false };
+    }
   },
-  get_employee_info: {
+  generate_chart: {
     definition: {
-      name: "get_employee_info",
-      description: "查询员工档案及组织架构信息。",
+      name: "generate_chart",
+      description: "当数据分析结果需要以图表形式展示时调用（柱状图、饼图、折线图）。",
       parameters: {
         type: Type.OBJECT,
-        properties: { name: { type: Type.STRING } },
-        required: ["name"]
+        properties: {
+          type: { type: Type.STRING, enum: ["bar", "pie", "line"] },
+          title: { type: Type.STRING },
+          labels: { type: Type.ARRAY, items: { type: Type.STRING } },
+          datasets: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                label: { type: Type.STRING },
+                data: { type: Type.ARRAY, items: { type: Type.NUMBER } },
+                color: { type: Type.STRING }
+              },
+              required: ["label", "data"]
+            }
+          }
+        },
+        required: ["type", "title", "labels", "datasets"]
       }
     },
-    executor: (args) => ({ 
-      name: args.name, 
-      id: "EMP_" + Math.floor(Math.random() * 10000),
-      dept: "战略销售部", 
-      level: "P7", 
-      status: "ACTIVE" 
-    })
+    executor: (args) => args
+  },
+  write_file: {
+    definition: {
+      name: "write_file",
+      description: "将生成的内容、文档或代码写入虚拟文件系统. 仅在用户明确要求保存或生成文件时使用。",
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          path: { type: Type.STRING, description: "目标文件路径" },
+          content: { type: Type.STRING, description: "文件完整内容" },
+          language: { type: Type.STRING, description: "内容语言类型(markdown/java/json等)" }
+        },
+        required: ["path", "content", "language"]
+      }
+    },
+    executor: async (args, sessionId, onProgress) => {
+      const { path, content, language } = args;
+      agentStateService.updateVfs(sessionId, path, "", language);
+      const lines = content.split('\n');
+      const batchSize = Math.max(1, Math.floor(lines.length / 5));
+      let accumulated = "";
+      for (let i = 0; i < lines.length; i += batchSize) {
+        const chunk = lines.slice(i, i + batchSize).join('\n') + (i + batchSize < lines.length ? '\n' : '');
+        accumulated += chunk;
+        agentStateService.updateVfs(sessionId, path, accumulated, language);
+        if (onProgress) onProgress(`正在同步文件内容 ${path}: ${Math.round((Math.min(i + batchSize, lines.length) / lines.length) * 100)}%`);
+        await new Promise(r => setTimeout(r, 150));
+      }
+      agentStateService.updateVfs(sessionId, path, content, language);
+      return { status: "SUCCESS", path };
+    }
   }
 };
 
-export const toolDefinitions = Object.values(TOOL_REGISTRY).map(t => t.definition);
-
-// --- 3. Domain Logic Layer ---
-
-const getIndustryPromptStrategy = (industry: Industry): string => {
-  return `
-    你是一个由 Spring Boot 架构驱动的企业级 Supervisor Agent。
-    当前业务领域：${industry}
-    
-    核心原则：
-    1. 编排工具链以解决复杂业务问题。
-    2. 生成专业、结构化的 Markdown 报告。
-    3. 数据可视化：如果结果包含数值对比，必须在回答中嵌入以下格式的 JSON 块。
-    
-    数据可视化规范：
-    \`\`\`json
-    {
-      "chartData": {
-        "type": "bar",
-        "title": "分析图表",
-        "labels": ["项A", "项B"],
-        "datasets": [{ "label": "数值", "data": [100, 200] }]
-      }
-    }
-    \`\`\`
-  `;
-};
-
-// --- 4. Service Orchestrator ---
+const toolDefinitions = Object.values(TOOL_REGISTRY).map(t => t.definition);
 
 export const supervisorAgent = async (
   sessionId: string,
   prompt: string,
   industry: Industry,
   onThinking: (step: ThinkingStep) => void,
-  onText: (chunk: string) => void
+  onText: (chunk: string) => void,
+  onPlanProposed?: (plan: Plan) => void,
+  onChartData?: (data: ChartData) => void,
+  resumePlan?: Plan,
+  isApprovalConfirmed?: boolean 
 ) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const systemInstruction = getIndustryPromptStrategy(industry);
   const sessionState = agentStateService.getSession(sessionId);
-  
-  // Use a clean history for the internal loop
   let history: any[] = sessionState?.geminiHistory || [];
-  history.push({ role: 'user', parts: [{ text: prompt }] });
+  
+  const instruction = `你是一个全能的政企级 AI Supervisor (控制中枢)。你的职责是处理复杂的多步骤业务请求。
+  
+核心原则：
+1. 逻辑与输出分离：所有关于“我将如何处理”、“分析过程”、“执行步骤说明”等中间逻辑，必须且只能存在于你的【思维/Thought】令牌中。最终输出的 Markdown 文本中严禁出现这些内容。
+2. 复合需求处理：当用户提出包含多个任务（如查询、预约、计算、写作）的复合需求时，你必须先在思维中进行拆解，并调用 propose_plan 工具展示执行路径。
+3. 最终呈现：Markdown 文本应直接展示结果（如祝福语、分析报告、核算结果）。
+4. 格式化 JSON：如果需要在文本中展示图表或计划数据，请使用标准的 JSON 代码块：
+   - 图表：{"chartData": {...}}
+   - 计划：{"plan": {"title": "...", "steps": [...]}}
+   系统会自动美化这些 JSON 块。
+
+工具调用规范：
+- propose_plan: 必须用于涉及多个逻辑阶段的任务。
+- generate_chart: 用于展示数值对比。
+- write_file: 用于持久化文档或代码。
+
+业务上下文：
+- 当前行业：${industry}
+- 编排模式：智能编排 (Supervisor Pattern)`;
+
+  if (prompt || resumePlan) {
+    let userText = "";
+    if (resumePlan) {
+      if (isApprovalConfirmed) {
+        userText = `计划已批准。请按计划执行：${JSON.stringify(resumePlan.steps.filter(s => s.approved))}`;
+      } else {
+        userText = `用户针对当前待审批计划提出了新的补充建议或调整，请结合最新输入重新评估任务并执行：\n最新输入: ${prompt}\n当前待审批计划: ${JSON.stringify(resumePlan)}`;
+      }
+    } else {
+      userText = prompt;
+    }
+    history.push({ role: 'user', parts: [{ text: userText }] });
+  }
 
   let loopCount = 0;
-  const MAX_LOOPS = 10;
-  let finalResponseText = "";
+  let currentTurnText = "";
 
-  try {
-    while (loopCount < MAX_LOOPS) {
-      loopCount++;
-
-      // Always initialize and call generateContentStream for text/tool turns
-      const stream = await retryWithBackoff(() => ai.models.generateContentStream({
-        model: 'gemini-3-pro-preview',
-        contents: history,
-        config: {
-          systemInstruction,
-          tools: [{ functionDeclarations: toolDefinitions }],
-          temperature: 0.1,
-          maxOutputTokens: 10000,
-          thinkingConfig: { thinkingBudget: 4000 }
-        }
-      }));
-
-      // CRITICAL: We must preserve the original Part objects (including thought_signature)
-      const accumulatedParts: any[] = [];
-      let currentTurnText = "";
-      let currentThought = "";
-
-      for await (const chunk of stream) {
-        const candidate = chunk.candidates?.[0];
-        if (candidate?.content?.parts) {
-          for (const part of candidate.content.parts) {
-            if (part.text) {
-              currentTurnText += part.text;
-              onText(currentTurnText);
-              
-              // Correctly aggregate text parts to minimize history bloat while preserving order
-              if (accumulatedParts.length > 0 && accumulatedParts[accumulatedParts.length - 1].text !== undefined) {
-                accumulatedParts[accumulatedParts.length - 1].text += part.text;
-              } else {
-                accumulatedParts.push({ text: part.text });
-              }
-            } else if (part.thought) {
-              // IMPORTANT: The 'thought' part contains reasoning and the internal signature
-              currentThought += part.thought;
-              // Add original thought part to history
-              accumulatedParts.push(part);
-            } else if (part.functionCall) {
-              // Add original functionCall part to history
-              accumulatedParts.push(part);
-            } else {
-              // Handle any other part types as-is
-              accumulatedParts.push(part);
-            }
-          }
-        }
+  while (loopCount < 15) {
+    loopCount++;
+    const stream = await retryWithBackoff(() => ai.models.generateContentStream({
+      model: 'gemini-3-flash-preview',
+      contents: history,
+      config: {
+        systemInstruction: instruction,
+        tools: [{ functionDeclarations: toolDefinitions }],
+        thinkingConfig: { thinkingBudget: 8000 }
       }
+    }));
 
-      // Add model's aggregated turn to history
-      history.push({ role: 'model', parts: accumulatedParts });
+    const accumulatedParts: any[] = [];
+    currentTurnText = "";
+    let currentThought = "";
 
-      // Identify function calls to execute
-      const functionCalls = accumulatedParts.filter(p => p.functionCall).map(p => p.functionCall);
-
-      if (functionCalls.length > 0) {
-        // Handle reasoning visualization
-        if (currentThought || currentTurnText) {
-          onThinking({
-            id: `thought-${Date.now()}-${loopCount}`,
-            agentId: 'Supervisor-Logic',
-            agentName: '逻辑编排',
-            content: currentThought || currentTurnText,
-            status: 'completed',
-            timestamp: Date.now()
-          });
-          onText(""); // Prepare for the next turn's streaming text
-        }
-
-        const functionResponses: Part[] = [];
-
-        for (const call of functionCalls) {
-          const tool = TOOL_REGISTRY[call.name];
-          
-          onThinking({
-            id: `exec-${call.id || Date.now()}-${loopCount}`,
-            agentId: call.name,
-            agentName: `调度工具: ${call.name}`,
-            content: `正在检索业务系统数据...`,
-            details: JSON.stringify(call.args),
-            status: 'active',
-            timestamp: Date.now()
-          });
-
-          try {
-            const result = await (tool ? tool.executor(call.args) : { error: "Tool not found" });
-            functionResponses.push({
-              functionResponse: {
-                name: call.name,
-                response: { result },
-                id: call.id
-              }
+    for await (const chunk of stream) {
+      const candidate = chunk.candidates?.[0];
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
+          if (part.text) {
+            currentTurnText += part.text;
+            onText(currentTurnText);
+            if (accumulatedParts.length > 0 && accumulatedParts[accumulatedParts.length-1].text) {
+               accumulatedParts[accumulatedParts.length-1].text += part.text;
+            } else {
+               accumulatedParts.push({ text: part.text });
+            }
+          } else if (part.thought) {
+            currentThought += part.thought;
+            onThinking({ 
+              id: `th-stream-${Date.now()}`, agentId: 'supervisor', agentName: '逻辑编排', 
+              content: '正在处理深度逻辑链...', 
+              details: currentThought,
+              status: 'active', timestamp: Date.now() 
             });
-            
-            onThinking({
-              id: `exec-${call.id || Date.now()}-${loopCount}`,
-              agentId: call.name,
-              agentName: `数据回传: ${call.name}`,
-              content: `已成功获取底层数据回包。`,
-              details: JSON.stringify(result, null, 2),
-              status: 'completed',
-              timestamp: Date.now()
-            });
-          } catch (e: any) {
-            functionResponses.push({
-              functionResponse: { name: call.name, response: { error: e.message }, id: call.id }
-            });
+            accumulatedParts.push(part);
+          } else if (part.functionCall) {
+            accumulatedParts.push(part);
           }
         }
-
-        // Add tool results to history for next model turn
-        history.push({ role: 'user', parts: functionResponses });
-        agentStateService.saveSession(sessionId, { geminiHistory: history });
-      } else {
-        // No more tool calls, we reached the final answer
-        finalResponseText = currentTurnText;
-        agentStateService.saveSession(sessionId, { geminiHistory: history });
-        break;
       }
     }
 
-    return { text: finalResponseText };
+    history.push({ role: 'model', parts: accumulatedParts });
+    const functionCalls = accumulatedParts.filter(p => p.functionCall).map(p => p.functionCall);
 
-  } catch (error: any) {
-    console.error("Agent Orchestration Error:", error);
-    throw error;
+    if (functionCalls.length > 0) {
+      if (currentThought) {
+        onThinking({ 
+          id: `th-${Date.now()}-${loopCount}`, agentId: 'supervisor', agentName: '逻辑完成', 
+          content: '逻辑解析完成，正在调用业务单元执行任务...', 
+          details: currentThought,
+          status: 'completed', timestamp: Date.now() 
+        });
+      }
+
+      const toolExecutions = functionCalls.map(async (call) => {
+        const stepId = `call-${call.id}`;
+        
+        if (call.name === 'propose_plan') {
+          const planData = call.args as Plan;
+          planData.steps = (planData.steps || []).map(s => ({ 
+            ...s, 
+            approved: !s.requiresApproval,
+            isAutoApproved: !s.requiresApproval 
+          }));
+          onPlanProposed?.({ ...planData, isApproved: false, isCollapsed: false });
+          return { functionResponse: { name: call.name, response: { status: "AWAITING_APPROVAL" }, id: call.id } } as Part;
+        }
+
+        if (call.name === 'generate_chart') {
+          const chartData = call.args as ChartData;
+          onChartData?.(chartData);
+          return { functionResponse: { name: call.name, response: { status: "CHART_GENERATED" }, id: call.id } } as Part;
+        }
+
+        const toolNameMap: Record<string, string> = {
+          'write_file': '并行文件写入任务',
+          'analyze_requirements': '深度需求分析工具',
+          'get_current_date': '系统时钟服务'
+        };
+
+        const agentName = toolNameMap[call.name] || call.name;
+
+        onThinking({ 
+          id: stepId, agentId: call.name, 
+          agentName, 
+          content: `业务单元 [${call.name}] 响应中...`, 
+          status: 'active', timestamp: Date.now(),
+          group: call.name,
+          fileLink: call.name === 'write_file' ? call.args.path : undefined
+        });
+
+        try {
+          const result = await (TOOL_REGISTRY[call.name] 
+            ? TOOL_REGISTRY[call.name].executor(call.args, sessionId, (p) => {
+                onThinking({ 
+                  id: stepId, agentId: call.name, 
+                  agentName, 
+                  content: p, status: 'active', timestamp: Date.now(), group: call.name, fileLink: call.args.path 
+                });
+              }) 
+            : { error: "ToolNotFound" });
+
+          onThinking({ 
+            id: stepId, agentId: call.name, 
+            agentName, 
+            content: `操作执行完毕。`, 
+            details: `执行结果: ${JSON.stringify(result, null, 2)}`, 
+            status: 'completed', timestamp: Date.now(), group: call.name,
+            fileLink: call.name === 'write_file' ? call.args.path : undefined
+          });
+
+          return { functionResponse: { name: call.name, response: { result }, id: call.id } } as Part;
+        } catch (e: any) {
+          onThinking({ id: stepId, agentId: call.name, agentName, content: `执行异常: ${e.message}`, status: 'failed', timestamp: Date.now(), group: call.name });
+          return { functionResponse: { name: call.name, response: { error: e.message }, id: call.id } } as Part;
+        }
+      });
+
+      const functionResponses = await Promise.all(toolExecutions);
+      history.push({ role: 'user', parts: functionResponses });
+      
+      if (functionCalls.some(f => f.name === 'propose_plan')) break;
+    } else {
+      break;
+    }
   }
+  agentStateService.saveSession(sessionId, { geminiHistory: history });
+  return { text: currentTurnText };
 };
 
-// --- 5. Semantic Splitting ---
-
-export const semanticChunker = async (text: string) => {
+export const semanticChunker = async (text: string): Promise<any[]> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `请对以下内容进行语义完整性切片，输出符合 Schema 的 JSON 数组：\n\n${text}`,
+    contents: `请将以下长文本进行语义切片（Semantic Chunking）。
+每个切片应该是逻辑完整的，并提供简洁的摘要和切分理由。
+文本内容：
+${text}`,
     config: {
-      responseMimeType: 'application/json',
+      responseMimeType: "application/json",
       responseSchema: {
         type: Type.ARRAY,
         items: {
           type: Type.OBJECT,
           properties: {
-            content: { type: Type.STRING, description: "切分段落原文" },
-            summary: { type: Type.STRING, description: "语义摘要" },
-            boundaryReason: { type: Type.STRING, description: "切分逻辑说明" }
+            content: { type: Type.STRING, description: "切片的原始文本内容" },
+            summary: { type: Type.STRING, description: "该切片的语义摘要" },
+            boundaryReason: { type: Type.STRING, description: "为什么在此处进行切分的逻辑理由" }
           },
-          required: ['content', 'summary', 'boundaryReason']
+          required: ["content", "summary", "boundaryReason"]
         }
       }
     }
   });
 
   try {
-    return JSON.parse(response.text || '[]');
+    const resultText = response.text || "[]";
+    const result = JSON.parse(resultText);
+    return Array.isArray(result) ? result : [];
   } catch (e) {
-    console.error("Parse Error:", e);
+    console.error("Failed to parse semantic chunks", e);
     return [];
   }
 };

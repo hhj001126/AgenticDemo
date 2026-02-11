@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import AgentChat from './components/AgentChat';
 import SemanticChunker from './components/SemanticChunker';
@@ -15,10 +14,29 @@ import {
   Server
 } from 'lucide-react';
 
+const STORAGE_APP_STATE = 'agent_orchestrator_app_state';
+
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [industry, setIndustry] = useState<Industry>(Industry.GENERAL);
-  const [mode, setMode] = useState<AgentMode>(AgentMode.AGENTIC);
+  // Restore state from localStorage if available
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_APP_STATE);
+    return saved ? JSON.parse(saved).activeTab : 'dashboard';
+  });
+  
+  const [industry, setIndustry] = useState<Industry>(() => {
+    const saved = localStorage.getItem(STORAGE_APP_STATE);
+    return saved ? JSON.parse(saved).industry : Industry.GENERAL;
+  });
+  
+  const [mode, setMode] = useState<AgentMode>(() => {
+    const saved = localStorage.getItem(STORAGE_APP_STATE);
+    return saved ? JSON.parse(saved).mode : AgentMode.AGENTIC;
+  });
+
+  // Save state on changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_APP_STATE, JSON.stringify({ activeTab, industry, mode }));
+  }, [activeTab, industry, mode]);
 
   const renderContent = () => {
     switch (activeTab) {

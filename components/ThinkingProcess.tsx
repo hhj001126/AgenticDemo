@@ -1,156 +1,65 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
   BrainCircuit, CheckCircle2, Loader2, ChevronDown, ChevronUp, 
-  Code2, AlertTriangle, Braces, Copy, Plus, Minus, Activity 
+  Activity, ExternalLink, Info, Braces
 } from 'lucide-react';
 import { ThinkingStep } from '../types';
 
-interface ThinkingProcessProps {
-  steps: ThinkingStep[];
-  className?: string;
+interface ThinkingStepItemProps {
+  step: ThinkingStep;
+  onFileClick?: (path: string) => void;
 }
 
-// Deep JSON Viewer with individual expansion logic
-const JsonView: React.FC<{ data: any; label?: string; level?: number; defaultOpen?: boolean }> = ({ data, label, level = 0, defaultOpen = false }) => {
-  const isObject = data !== null && typeof data === 'object';
-  const [isOpen, setIsOpen] = useState(defaultOpen || level < 2);
-
-  if (!isObject) {
-    return (
-      <div className="flex items-start gap-2 py-0.5 pl-2">
-        {label && <span className="text-indigo-300 font-semibold italic">"{label}":</span>}
-        <span className={typeof data === 'string' ? 'text-emerald-400' : 'text-amber-400'}>
-          {typeof data === 'string' ? `"${data}"` : String(data)}
-        </span>
-      </div>
-    );
-  }
-
-  const entries = Object.entries(data);
-  const isArray = Array.isArray(data);
-
-  return (
-    <div className={`font-mono text-[11px] ${level > 0 ? 'ml-4 border-l border-slate-700/50 pl-2' : ''}`}>
-      <div 
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 py-1 cursor-pointer hover:bg-white/5 rounded transition-all group/header"
-      >
-        <div className="text-slate-500 group-hover/header:text-slate-300">
-          {isOpen ? <Minus size={10} /> : <Plus size={10} />}
-        </div>
-        {label && <span className="text-indigo-300 font-bold">"{label}":</span>}
-        <span className="text-slate-500">
-          {isArray ? `Array(${entries.length}) [` : `Object {`}
-          {!isOpen && ' ... '}
-          {isArray ? ']' : '}'}
-        </span>
-      </div>
-      
-      {isOpen && (
-        <div className="space-y-0.5">
-          {entries.map(([key, value]) => (
-            <JsonView key={key} label={isArray ? undefined : key} data={value} level={level + 1} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ThinkingStepItem: React.FC<{ step: ThinkingStep }> = ({ step }) => {
+const ThinkingStepRow: React.FC<ThinkingStepItemProps> = ({ step, onFileClick }) => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const parsedDetails = useMemo(() => {
-    if (!step.details) return null;
-    try {
-      return JSON.parse(step.details);
-    } catch (e) {
-      return step.details;
-    }
-  }, [step.details]);
-
   return (
-    <div className="relative pl-10 animate-in fade-in slide-in-from-left-2 duration-300">
-      {/* Node Icon */}
-      <div className={`absolute left-[11px] top-1 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center z-10 ${
-        step.status === 'completed' ? 'border-emerald-500 text-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 
-        step.status === 'active' ? 'border-indigo-500 text-indigo-500' : 
-        step.status === 'failed' ? 'border-rose-500 text-rose-500' : 'border-slate-300'
+    <div className="relative pl-6 pb-6 last:pb-0">
+      {/* Timeline line */}
+      <div className="absolute left-[9px] top-2 bottom-0 w-0.5 bg-slate-100 group-last:hidden"></div>
+      
+      {/* Status indicator */}
+      <div className={`absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center border-2 z-10 ${
+        step.status === 'completed' ? 'bg-emerald-50 border-emerald-300 text-emerald-600' : 
+        step.status === 'active' ? 'bg-indigo-600 border-indigo-600 text-white animate-pulse' : 'bg-white border-slate-200 text-slate-400'
       }`}>
-        {step.status === 'completed' ? <CheckCircle2 size={10} /> : 
-         step.status === 'active' ? <Loader2 size={10} className="animate-spin" /> : 
-         step.status === 'failed' ? <AlertTriangle size={10} /> : null}
+        {step.status === 'active' ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />}
       </div>
 
-      <div className={`p-4 rounded-2xl border transition-all ${
-        step.status === 'active' ? 'bg-white border-indigo-200 shadow-lg scale-[1.01]' : 
-        step.status === 'failed' ? 'bg-rose-50/50 border-rose-100 shadow-sm' : 'bg-slate-50 border-transparent shadow-sm'
-      }`}>
+      <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100 hover:border-indigo-200 hover:bg-white transition-all group/item shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-             <span className={`text-[10px] font-black uppercase tracking-widest ${
-              step.status === 'failed' ? 'text-rose-500' : 'text-slate-500'
-            }`}>{step.agentName}</span>
-            {typeof parsedDetails === 'object' && (
-              <div className="px-1.5 py-0.5 bg-indigo-50 text-indigo-500 rounded-md flex items-center gap-1 border border-indigo-100">
-                <Braces size={10} />
-                <span className="text-[8px] font-bold uppercase">JSON</span>
-              </div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">#{step.id.slice(-4)}</span>
+            <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">
+              <Braces size={10} />
+              {step.agentName}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-bold text-slate-400">{new Date(step.timestamp).toLocaleTimeString()}</span>
+            {step.details && (
+              <button 
+                onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                className="p-1 hover:bg-slate-200 rounded text-slate-500 transition-colors"
+              >
+                {isDetailsOpen ? <ChevronUp size={12} /> : <Info size={12} />}
+              </button>
+            )}
+            {step.fileLink && (
+              <button onClick={() => onFileClick?.(step.fileLink!)} className="p-1 hover:bg-indigo-100 rounded text-indigo-600 transition-colors">
+                <ExternalLink size={12} />
+              </button>
             )}
           </div>
-          <span className="text-[9px] font-bold text-slate-400 font-mono flex items-center gap-1">
-             <Activity size={10} className="opacity-50" />
-            {new Date(step.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </span>
         </div>
-        
-        <p className={`text-sm leading-relaxed font-semibold ${step.status === 'failed' ? 'text-rose-700' : 'text-slate-800'}`}>
-          {step.content}
-        </p>
-        
-        {step.details && (
-          <div className="mt-4">
-            <button 
-              onClick={() => setIsDetailsOpen(!isDetailsOpen)}
-              className="flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-indigo-600 transition-all uppercase tracking-widest group"
-            >
-              <div className="p-1 rounded bg-slate-200 group-hover:bg-indigo-100 transition-colors">
-                <Code2 size={12} />
-              </div>
-              {isDetailsOpen ? '收起技术参数' : '展开调用参数与原始回传'}
-              <div className={`transition-transform duration-200 ${isDetailsOpen ? 'rotate-180' : ''}`}>
-                <ChevronDown size={12} />
-              </div>
-            </button>
-            
-            {isDetailsOpen && (
-              <div className="mt-3 p-4 bg-slate-900 rounded-2xl overflow-x-auto border border-white/5 shadow-2xl group relative animate-in fade-in zoom-in-95 duration-200">
-                <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button 
-                    className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5"
-                    onClick={() => navigator.clipboard.writeText(step.details || '')}
-                  >
-                    <Copy size={12} />
-                    <span className="text-[9px] font-bold tracking-tighter">COPY</span>
-                  </button>
-                </div>
-                
-                <div className="text-[11px] leading-relaxed">
-                  {typeof parsedDetails === 'object' ? (
-                    <JsonView data={parsedDetails} defaultOpen={true} />
-                  ) : (
-                    <pre className="text-emerald-400 font-mono whitespace-pre-wrap">{step.details}</pre>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {step.status === 'active' && (
-          <div className="mt-3 flex gap-1 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500 animate-progress w-full shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
+        <p className="text-sm font-bold text-slate-800 leading-relaxed">{step.content}</p>
+
+        {isDetailsOpen && step.details && (
+          <div className="mt-3 p-4 bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-inner group/details relative animate-in fade-in slide-in-from-top-2 duration-300">
+             <pre className="text-[11px] font-mono text-indigo-200/90 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto custom-scrollbar">{step.details}</pre>
+             <div className="absolute top-2 right-2 text-[8px] font-black text-slate-700 uppercase tracking-widest opacity-30 group-hover/details:opacity-60 transition-opacity">Execution Trace</div>
           </div>
         )}
       </div>
@@ -158,28 +67,47 @@ const ThinkingStepItem: React.FC<{ step: ThinkingStep }> = ({ step }) => {
   );
 };
 
-const ThinkingProcess: React.FC<ThinkingProcessProps> = ({ steps, className }) => {
+const ThinkingProcess: React.FC<{ steps: ThinkingStep[]; onFileClick?: (path: string) => void }> = ({ steps, onFileClick }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   if (!steps.length) return null;
 
+  const isActive = steps.some(s => s.status === 'active');
+  const sortedSteps = [...steps].sort((a, b) => a.timestamp - b.timestamp);
+
   return (
-    <div className={`space-y-4 p-6 bg-slate-50/50 rounded-[2rem] border border-slate-200/60 shadow-inner ${className}`}>
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex items-center gap-2 text-indigo-600">
-          <BrainCircuit size={18} className="animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Reasoning Path (CoT)</span>
+    <div className={`bg-white rounded-[2rem] border-2 ${isActive ? 'border-indigo-400 shadow-indigo-100' : 'border-slate-200 shadow-slate-100'} overflow-hidden transition-all duration-500 w-full shadow-xl`}>
+      <div 
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={`flex items-center justify-between px-7 py-5 cursor-pointer transition-colors ${isCollapsed ? 'hover:bg-slate-50' : 'bg-slate-50/50 hover:bg-slate-100/50 border-b border-slate-100'}`}
+      >
+        <div className="flex items-center gap-4">
+          <div className={`p-2.5 rounded-2xl shadow-lg transition-all ${isActive ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-900 text-white'}`}>
+            <BrainCircuit size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 block">思维逻辑链条 (Chain of Thought)</span>
+              {isActive && <div className="px-2 py-0.5 bg-indigo-100 text-indigo-600 text-[9px] font-black rounded-full animate-pulse uppercase">分析中...</div>}
+            </div>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{steps.length} 个逻辑节点已就绪</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-black text-slate-400 uppercase">Supervisor Orchestrated</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase mr-2">{isCollapsed ? '展开详情' : '折叠'}</span>
+          {isCollapsed ? <ChevronDown size={20} className="text-slate-400" /> : <ChevronUp size={20} className="text-slate-400" />}
         </div>
       </div>
       
-      <div className="space-y-6 relative">
-        <div className="absolute left-[18.5px] top-2 bottom-2 w-0.5 bg-slate-200/50 border-l border-dashed border-slate-300"></div>
-        
-        {steps.map((step) => (
-          <ThinkingStepItem key={step.id} step={step} />
-        ))}
-      </div>
+      {!isCollapsed && (
+        <div className="px-7 py-8 max-h-[500px] overflow-y-auto custom-scrollbar">
+          <div className="flex flex-col">
+            {sortedSteps.map(s => (
+              <ThinkingStepRow key={s.id} step={s} onFileClick={onFileClick} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
