@@ -1,8 +1,10 @@
 export { Badge } from './Badge';
 export { Button } from './Button';
 export { Card } from './Card';
+export { ConfirmProvider, useConfirm } from './Confirm';
+export type { ConfirmOptions } from './Confirm';
 export { Flex } from './Flex';
 export { IconBadge } from './IconBadge';
-export { Input, InputGroup, Textarea } from './Input';
+export { Input, InputGroup, InputGroupWithButton, Textarea } from './Input';
 export { AppLayout, MainContent, PageContainer, ChatPanelLayout } from './Layout';
 export { Surface } from './Surface';

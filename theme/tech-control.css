@@ -3,17 +3,17 @@
  * 面向 Enterprise Agentic Orchestrator 的科技控制台风格
  * 设计原则：industrial/utilitarian、清晰、专业、技术感
  *
- * 色彩：深灰底座 + 青色强调（避免通用紫）
+ * 色彩：深灰底座 + 主色 #4075F9 强调
  * 字体：Plus Jakarta Sans（标题）+ Source Sans 3（正文）
  */
 
 :root {
-  /* ========== 色彩（青色主色，区别于通用 indigo）========== */
-  --color-primary: #0891b2;
-  --color-primary-50: #ecfeff;
-  --color-primary-100: #cffafe;
-  --color-primary-500: #06b6d4;
-  --color-primary-700: #0e7490;
+  /* ========== 色彩（主色 #4075F9）========== */
+  --color-primary: #4075F9;
+  --color-primary-50: #eef4ff;
+  --color-primary-100: #dbe6ff;
+  --color-primary-500: #4075F9;
+  --color-primary-700: #2d5bd8;
   --color-surface: #ffffff;
   --color-surface-muted: #f1f5f9;
   --color-surface-elevated: #ffffff;
@@ -31,9 +31,9 @@
   --color-error-bg: #fef2f2;
   --color-info: #0284c7;
 
-  /* ========== 背景（带青色微调的渐变）========== */
-  --bg-app: linear-gradient(165deg, #f0f9ff 0%, #f8fafc 50%, #f1f5f9 100%);
-  --bg-app-fallback: #f0f9ff;
+  /* ========== 背景（带主色微调的渐变）========== */
+  --bg-app: linear-gradient(165deg, #f5faff 0%, #f8fafc 50%, #f1f5f9 100%);
+  --bg-app-fallback: #f5faff;
   --bg-sidebar: #0f172a;
   --bg-sidebar-muted: #1e293b;
 
@@ -81,13 +81,13 @@
   --radius-input: 1.75rem;
   --radius-button: 0.75rem;
 
-  /* ========== 阴影 ========== */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
-  --shadow-card: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
-  --shadow-subtle: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  /* ========== 阴影（柔和、克制）========== */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 1px 4px -1px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 4px 12px -4px rgb(0 0 0 / 0.06), 0 2px 6px -2px rgb(0 0 0 / 0.04);
+  --shadow-xl: 0 8px 20px -6px rgb(0 0 0 / 0.08), 0 4px 10px -4px rgb(0 0 0 / 0.04);
+  --shadow-card: 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 1px 4px -1px rgb(0 0 0 / 0.04);
+  --shadow-subtle: 0 1px 3px 0 rgb(0 0 0 / 0.04);
 
   /* ========== 过渡 ========== */
   --transition-fast: 150ms;

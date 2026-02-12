@@ -36,6 +36,7 @@ theme/
 | 图标徽章 | `IconBadge` | `<IconBadge icon={Zap} variant="primary" />` |
 | 布局 | `Flex` | `<Flex direction="col" gap={4}>...</Flex>` |
 | 输入框 | `Input`、`Textarea`、`InputGroup` | `<InputGroup><Textarea /></InputGroup>` |
+| **Input + 按钮组合** | `InputGroupWithButton` | 输入框与按钮同高对齐，用于连接、搜索等场景 |
 
 ## 条件类名规范
 
@@ -62,6 +63,12 @@ className={cn('flex', msg.role === 'user' ? 'flex-row-reverse' : 'flex-row')}
 | **过渡** | `--transition-base`、`--ease-out` | `transition-theme`、`duration-base` |
 
 详见 `theme/tokens.ts` 与 `theme/tech-control.css`
+
+## Input + 按钮组合规范
+
+Input 与按钮组合使用时，必须使用 `InputGroupWithButton` 或等价布局，保证**同高对齐**：
+- 输入框与按钮应在同一水平线，高度一致
+- 使用 `flex items-stretch` 或 `items-center` 实现，禁止 `align-end` 导致错位
 
 ## 业务组件重构指引
 

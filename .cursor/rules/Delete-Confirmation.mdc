@@ -1,0 +1,43 @@
+---
+description: 删除/移除类操作必须二次确认
+alwaysApply: true
+---
+
+# 删除操作二次确认
+
+## 规则
+
+**所有删除、移除、清空等不可逆操作，必须在使用前进行二次确认。**
+
+## 适用场景
+
+- 移除/删除列表项（如 MCP 服务器、配置项、记录等）
+- 清空数据、重置状态
+- 注销、解绑、断开并删除等
+
+## 实现方式
+
+- **Web 界面**：使用项目内**全局 Confirm 组件**（`useConfirm()`），在用户确认后再执行删除逻辑。禁止使用 `window.confirm()`。
+- 通过 `import { useConfirm } from '@/components/ui'` 或 `from '../ui'` 获取 `confirm`，调用 `await confirm({ title, message, danger: true, confirmText, cancelText })` 返回 `Promise<boolean>`。
+- 确认文案应说明操作对象和后果（如「确定要移除「xxx」吗？移除后需重新添加才能再连接。」）。
+
+## 示例
+
+```ts
+const confirm = useConfirm();
+
+const handleRemove = async (id: string) => {
+  const item = items.find((i) => i.id === id);
+  const ok = await confirm({
+    title: '删除项',
+    message: `确定要删除「${item?.name ?? id}」吗？此操作不可恢复。`,
+    danger: true,
+    confirmText: '删除',
+    cancelText: '取消',
+  });
+  if (!ok) return;
+  // 执行实际删除
+};
+```
+
+新增或修改任何「删除」「移除」「清空」相关功能时，请遵守本规则。

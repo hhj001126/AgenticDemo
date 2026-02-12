@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import AgentChat from './components/AgentChat';
+import ToolsManagerPage from './components/tools/ToolsManagerPage';
+import McpConnectionManager from './components/tools/McpConnectionManager';
 import SemanticChunker from './components/SemanticChunker';
 import VectorDatabase from './components/VectorDatabase';
-import { AppLayout, MainContent, PageContainer } from './components/ui';
+import { AppLayout, MainContent, PageContainer, ConfirmProvider } from './components/ui';
 import { Industry, AgentMode } from './types';
 import { Network, ExternalLink } from 'lucide-react';
 
@@ -33,6 +35,8 @@ const App: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return <AgentChat industry={industry} mode={mode} />;
+      case 'tools':
+        return <ToolsManagerPage />;
       case 'knowledge':
         return <SemanticChunker />;
       case 'vector':
@@ -72,9 +76,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <AppLayout
-      sidebar={
-        <Sidebar
+    <ConfirmProvider>
+      <McpConnectionManager />
+      <AppLayout
+        sidebar={
+          <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           industry={industry}
@@ -86,6 +92,7 @@ const App: React.FC = () => {
     >
       <MainContent>{renderContent()}</MainContent>
     </AppLayout>
+    </ConfirmProvider>
   );
 };
 

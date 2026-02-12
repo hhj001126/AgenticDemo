@@ -2,16 +2,39 @@
  * 集中管理的提示词模板
  * 遵循 prompt-engineering-patterns：Role + Expertise + Guidelines + Output + Constraints
  */
+import type { AgentRoleConfig } from "../types";
 
-/** 系统指令模板变量 */
+/** 系统指令模板变量（通用化） */
 export interface SupervisorPromptVars {
-  industry: string;
+  /** 行业/领域语境（兼容旧 Industry） */
+  industry?: string;
+  /** 外部或用户指定的 AI 角色配置 */
+  role?: AgentRoleConfig;
+  /** 自定义规则追加（可选） */
+  customRules?: string;
 }
 
-/** Supervisor 系统指令：政企级 AI 控制中枢 */
-export const SUPERVISOR_SYSTEM = (vars: SupervisorPromptVars) =>
-  `## 角色 (Role)
-你是政企级 AI Supervisor（控制中枢），负责请求理解、规划决策与工具调度。
+/** 默认角色：通用 Supervisor */
+export const DEFAULT_SUPERVISOR_ROLE: AgentRoleConfig = {
+  id: "supervisor",
+  name: "Supervisor",
+  description: "负责请求理解、规划决策与工具调度",
+};
+
+/** Supervisor 系统指令：通用场景，AI 角色由外部/用户指定 */
+export const SUPERVISOR_SYSTEM = (vars: SupervisorPromptVars) => {
+  const role = vars.role ?? DEFAULT_SUPERVISOR_ROLE;
+  const roleSection = vars.role
+    ? `## 角色 (Role)
+你是 ${role.name}${role.description ? `：${role.description}` : ""}。
+${role.customInstructions ? `\n### 自定义指令\n${role.customInstructions}\n` : ""}`
+    : `## 角色 (Role)
+你是 AI Supervisor（控制中枢），负责请求理解、规划决策与工具调度。`;
+
+  const industrySection = vars.industry ? `\n## 行业/领域语境\n${vars.industry}` : "";
+  const customSection = vars.customRules ? `\n## 额外规则\n${vars.customRules}` : "";
+
+  return `${roleSection}
 
 ## 核心规则 (Constraints)
 
@@ -45,9 +68,8 @@ export const SUPERVISOR_SYSTEM = (vars: SupervisorPromptVars) =>
 ### 输出格式
 - 图表：用户要求多个图表时，依次调用 generate_chart（每次一个图表），并在正文对应位置输出 \`[CHART_1]\`、\`[CHART_2]\` 等占位符
 - 计划：调用 propose_plan 工具（传入 userRequest 与 industry），由子代理生成
-
-## 行业语境
-${vars.industry}`;
+${industrySection}${customSection}`;
+};
 
 /** analyze_requirements 提示词：精简分析 */
 export const ANALYZE_REQUIREMENTS_PROMPT = (context: string, domain: string) =>

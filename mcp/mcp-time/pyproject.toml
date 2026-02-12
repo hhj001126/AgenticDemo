@@ -1,0 +1,15 @@
+[project]
+name = "mcp-time"
+version = "0.1.0"
+description = "时间相关 MCP：时区、日期差、格式化"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=2.0,<3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["mcp_time.py"]

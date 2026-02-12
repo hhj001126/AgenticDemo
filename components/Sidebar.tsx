@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Database, Cpu, Layers, Box } from 'lucide-react';
+import React from 'react';
+import { LayoutDashboard, Database, Cpu, Layers, Box, Wrench } from 'lucide-react';
 import { Industry, AgentMode } from '../types';
 import { ApiKeyStatus } from './sidebar/ApiKeyStatus';
 import { IndustryModeSelector } from './sidebar/IndustryModeSelector';
@@ -15,6 +15,7 @@ interface SidebarProps {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: '智能编排中枢', icon: LayoutDashboard },
+  { id: 'tools', label: '工具管理', icon: Wrench },
   { id: 'knowledge', label: '语义切片引擎', icon: Database },
   { id: 'vector', label: '向量空间管理', icon: Layers },
   { id: 'mcp', label: '标准化能力网关', icon: Cpu },

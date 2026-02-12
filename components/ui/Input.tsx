@@ -6,7 +6,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 const baseInput =
-  'w-full bg-transparent border-none focus:ring-0 outline-none text-sm font-bold text-text';
+  'w-full px-3 bg-transparent border-none focus:ring-0 outline-none text-sm font-bold text-text';
 
 export const Input = memo<InputProps>(({ className, ...props }) => (
   <input className={cn(baseInput, className)} {...props} />
@@ -37,6 +37,30 @@ export const InputGroup = memo<InputGroupProps>(
       )}
     >
       {children}
+    </div>
+  )
+);
+
+/** Input + 按钮组合：同高对齐，用于连接、搜索等场景 */
+interface InputGroupWithButtonProps {
+  input: React.ReactNode;
+  button: React.ReactNode;
+  className?: string;
+}
+
+export const InputGroupWithButton = memo<InputGroupWithButtonProps>(
+  ({ input, button, className }) => (
+    <div
+      className={cn(
+        'flex items-stretch gap-0 rounded-input border-2 transition-all duration-300',
+        'bg-surface-muted border-border-muted',
+        className
+      )}
+    >
+      <div className="flex-1 min-w-0 flex items-center px-3 py-2">{input}</div>
+      <div className="flex items-stretch shrink-0 [&>button]:rounded-l-none [&>button]:rounded-r-lg">
+        {button}
+      </div>
     </div>
   )
 );

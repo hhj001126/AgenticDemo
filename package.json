@@ -6,15 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mcp:utils": "cd mcp/mcp-utils && uv sync && uv run python mcp_utils.py",
+    "mcp:file-ops": "cd mcp/mcp-file-ops && uv sync && uv run python mcp_file_ops.py",
+    "mcp:notes": "cd mcp/mcp-notes && uv sync && uv run python mcp_notes.py",
+    "mcp:echo": "cd mcp/mcp-echo && uv sync && uv run python mcp_echo.py",
+    "mcp:time": "cd mcp/mcp-time && uv sync && uv run python mcp_time.py"
   },
   "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
     "@google/genai": "^1.40.0",
     "lucide-react": "^0.563.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "react-markdown": "^9.0.0",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "use-mcp": "^0.0.21"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
