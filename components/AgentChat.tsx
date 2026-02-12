@@ -95,7 +95,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
     );
   }, []);
 
-  const handleSend = async (customInput?: string, resumePlan?: Plan, isConfirmAction = false) => {
+  const handleSend = async (customInput?: string, resumePlan?: Plan, isConfirmAction = false, planMsgId?: string) => {
     const textToSend = customInput || input;
     const isRefiningPlan = !isConfirmAction && messages.some((m) => m.isAwaitingApproval) && textToSend.trim();
 
@@ -119,7 +119,13 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
       setInput('');
     } else if (isConfirmAction) {
       setMessages((prev) =>
-        prev.map((m) => (m.plan && m.isAwaitingApproval ? { ...m, isAwaitingApproval: false, plan: { ...m.plan!, isCollapsed: true } } : m))
+        prev.map((m) => {
+          if (!m.plan || !m.isAwaitingApproval) return m;
+          const steps = m.plan.steps.map((s, i) =>
+            i === 0 ? { ...s, status: "in_progress" as const } : s
+          );
+          return { ...m, isAwaitingApproval: false, plan: { ...m.plan, steps, isCollapsed: true } };
+        })
       );
     } else if (isRefiningPlan) {
       const userMsg: Message = { id: Date.now().toString(), role: 'user', content: textToSend, timestamp: Date.now() };
@@ -176,8 +182,25 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
             )
           );
         },
+        (msgId, stepId, status) => {
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id !== msgId || !m.plan) return m;
+              const steps = m.plan.steps;
+              const idx = steps.findIndex((s) => s.id === stepId);
+              const newSteps = steps.map((s, i) => {
+                if (s.id === stepId) return { ...s, status };
+                if (status === "completed" && idx >= 0 && i === idx + 1) return { ...s, status: "in_progress" as const };
+                return s;
+              });
+              return { ...m, plan: { ...m.plan, steps: newSteps } };
+            })
+          );
+        },
         targetPlan,
-        isConfirmAction
+        isConfirmAction,
+        planMsgId,
+        { mode }
       );
     } catch (err) {
       console.error(err);
@@ -227,7 +250,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
                 }}
                 onToggleFold={togglePlanFold}
                 onToggleStep={toggleStepApproval}
-                onConfirm={(p) => handleSend(undefined, p, true)}
+                onConfirm={(p, msgId) => void handleSend(undefined, p, true, msgId)}
               />
             ))}
             {isLoading && !messages.some((m) => m.isAwaitingApproval) && (

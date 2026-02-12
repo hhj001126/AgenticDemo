@@ -44,6 +44,14 @@ function getServerIdFromToolId(toolId: string): string | null {
   return toolId.slice(0, toolId.lastIndexOf("__")).replace(/^mcp_/, "");
 }
 
+/** MCP 工具展示名：取 toolName 部分，便于阅读 */
+function getToolDisplayName(id: string, fallback: string): string {
+  if (id.startsWith("mcp_") && id.includes("__")) {
+    return id.slice(id.lastIndexOf("__") + 2);
+  }
+  return fallback || id;
+}
+
 interface ToolCardProps {
   id: string;
   name: string;
@@ -109,7 +117,14 @@ const ToolCard: React.FC<ToolCardProps> = ({
   </Card>
 );
 
-export default function ToolsManagerPage() {
+type ToolsSubTab = "builtin" | "mcp" | "all";
+
+interface ToolsManagerPageProps {
+  /** 从 MCP 导航进入时默认展开 MCP 区域 */
+  initialTab?: ToolsSubTab;
+}
+
+export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPageProps) {
   const [tools, setTools] = useState<
     Array<{ id: string; tool: any; source: RegistrySource }>
   >([]);
@@ -126,8 +141,11 @@ export default function ToolsManagerPage() {
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
-  const [expandedBuiltin, setExpandedBuiltin] = useState(true);
-  const [expandedMcpIds, setExpandedMcpIds] = useState<Set<string>>(new Set());
+  const [subTab, setSubTab] = useState<ToolsSubTab>(initialTab);
+  const [expandedBuiltin, setExpandedBuiltin] = useState(initialTab !== "mcp");
+  const [expandedMcpIds, setExpandedMcpIds] = useState<Set<string>>(() =>
+    initialTab === "mcp" ? new Set(getStoredMcpServers().map((s) => s.id)) : new Set()
+  );
 
   const refreshTools = useCallback(() => {
     setTools(toolRegistryService.getAllWithSource());
@@ -330,7 +348,25 @@ export default function ToolsManagerPage() {
           </div>
         </div>
 
-        {/* 工具与 MCP：卡片展示，每张卡片内展开工具明细 */}
+        {/* 子 Tab：内置工具 | MCP 连接 | 全部 */}
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-muted/60 border border-border-muted w-fit">
+          {(["builtin", "mcp", "all"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setSubTab(t)}
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-medium transition-theme",
+                subTab === t ? "bg-primary text-white shadow-md" : "text-text-muted hover:text-primary hover:bg-surface-muted"
+              )}
+            >
+              {t === "builtin" ? "内置工具" : t === "mcp" ? "MCP 连接" : "全部"}
+            </button>
+          ))}
+        </div>
+
+        {/* 工具与 MCP：按 subTab 过滤展示；MCP 相关 tab 显示添加按钮 */}
+        {(subTab === "mcp" || subTab === "all") && (
         <div className="flex items-center justify-end mb-2">
           <Button
             variant="primary"
@@ -345,9 +381,11 @@ export default function ToolsManagerPage() {
             添加 MCP
           </Button>
         </div>
+        )}
 
         <div className="space-y-4">
-          {/* 内置工具卡片 */}
+          {/* 内置工具卡片 - 在 builtin 或 all 时显示 */}
+          {(subTab === "builtin" || subTab === "all") && (
           <Card padding="none" className="border border-border shadow-subtle overflow-hidden">
             <button
               type="button"
@@ -379,7 +417,7 @@ export default function ToolsManagerPage() {
                     <ToolCard
                       key={id}
                       id={id}
-                      name={tool.definition?.name || id}
+                      name={getToolDisplayName(id, tool.definition?.name || id)}
                       description={tool.definition?.description || ""}
                       source={source}
                       blocking={tool.blocking}
@@ -392,9 +430,10 @@ export default function ToolsManagerPage() {
               </div>
             )}
           </Card>
+          )}
 
-          {/* 每个 MCP 一张卡片：连接状态、重连、编辑、删除，展开为工具明细 */}
-          {mcpServers.map((s) => {
+          {/* 每个 MCP 一张卡片 - 在 mcp 或 all 时显示 */}
+          {(subTab === "mcp" || subTab === "all") && mcpServers.map((s) => {
             const { tools: serverTools } = mcpToolsByServer.get(s.id) ?? { server: s, tools: [] };
             const isExpanded = expandedMcpIds.has(s.id);
             const isConnected = connectedIds.has(s.id);
@@ -522,7 +561,7 @@ export default function ToolsManagerPage() {
                         <ToolCard
                           key={id}
                           id={id}
-                          name={tool.definition?.name || id}
+                          name={getToolDisplayName(id, tool.definition?.name || id)}
                           description={tool.definition?.description || ""}
                           source={source}
                           blocking={tool.blocking}
@@ -540,7 +579,7 @@ export default function ToolsManagerPage() {
             );
           })}
 
-        {mcpServers.length === 0 && (
+        {(subTab === "mcp" || subTab === "all") && mcpServers.length === 0 && (
           <Card padding="lg" className="border border-dashed border-border-muted bg-surface-muted/20">
             <p className="text-sm text-text-muted text-center py-4">暂无 MCP 服务器，点击「添加 MCP」开始。</p>
           </Card>

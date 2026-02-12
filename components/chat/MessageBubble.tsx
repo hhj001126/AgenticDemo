@@ -14,7 +14,7 @@ export interface MessageBubbleProps {
   vfs?: Record<string, { path: string; content: string; language: string; isWriting?: boolean }>;
   onToggleFold?: (id: string) => void;
   onToggleStep?: (id: string, stepId: string) => void;
-  onConfirm?: (plan: import('../../types').Plan) => void;
+  onConfirm?: (plan: import('../../types').Plan, msgId?: string) => void;
 }
 
 export const MessageBubble = memo<MessageBubbleProps>(({ msg, onFileClick, onFileDetailClick, vfs = {}, onToggleFold, onToggleStep, onConfirm }) => (

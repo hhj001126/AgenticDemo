@@ -8,3 +8,4 @@ export { IconBadge } from './IconBadge';
 export { Input, InputGroup, InputGroupWithButton, Textarea } from './Input';
 export { AppLayout, MainContent, PageContainer, ChatPanelLayout } from './Layout';
 export { Surface } from './Surface';
+export { ToastProvider } from './Toast';

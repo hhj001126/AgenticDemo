@@ -1,7 +1,9 @@
 import { GoogleGenAI, Type, Part } from "@google/genai";
-import { Industry, ThinkingStep, Plan, ChartData, AgentRoleConfig } from "../types";
+import { Industry, ThinkingStep, Plan, ChartData, AgentRoleConfig, AgentMode } from "../types";
 import { agentStateService } from "./agentStateService";
 import { toolRegistryService } from "./registry";
+import { getConnectedMcpIds } from "./mcpService";
+import { setAgentContext } from "./agentContext";
 import { SUPERVISOR_SYSTEM, SEMANTIC_CHUNKER_PROMPT } from "./prompts";
 import { registerBuiltinTools } from "./builtinTools";
 
@@ -33,6 +35,8 @@ export interface SupervisorAgentOptions {
   role?: AgentRoleConfig;
   /** 自定义规则追加 */
   customRules?: string;
+  /** 运行模式：影响工具集与推理深度 */
+  mode?: AgentMode;
 }
 
 /** 阻塞式工具 ID 集合 */
@@ -63,9 +67,10 @@ async function executeToolCalls(
   blockingIds: Set<string>,
   callbacks: {
     onThinking: (step: ThinkingStep) => void;
-    onPlanProposed?: (plan: Plan) => void;
-    onChartData?: (data: ChartData) => void;
-  }
+  onPlanProposed?: (plan: Plan) => void;
+  onChartData?: (data: ChartData) => void;
+  onPlanStepUpdate?: (stepId: string, status: "in_progress" | "completed") => void;
+}
 ): Promise<{ parts: Part[]; writtenFilePaths: string[] }> {
   const hasPlanCall = functionCalls.some((f) => f.name === "propose_plan");
   const writtenFilePaths: string[] = [];
@@ -86,7 +91,7 @@ async function executeToolCalls(
     }
 
     if (call.name === "generate_chart") {
-      callbacks.onChartData?.(call.args as ChartData);
+      callbacks.onChartData?.(call.args as unknown as ChartData);
       return {
         functionResponse: { name: call.name, response: { status: "CHART_RENDERED" }, id: call.id },
       } as Part;
@@ -124,6 +129,11 @@ async function executeToolCalls(
             });
         }
       );
+
+      if (call.name === "report_step_done") {
+        const stepId = (call.args as { stepId?: string })?.stepId;
+        if (stepId) callbacks.onPlanStepUpdate?.(stepId, "completed");
+      }
 
       if (call.name === "propose_plan" && typeof result === "object" && result !== null && "plan" in result) {
         callbacks.onPlanProposed?.({ ...(result as any).plan, isApproved: false, isCollapsed: false });
@@ -190,8 +200,10 @@ export const supervisorAgent = async (
   onPlanProposed?: (plan: Plan) => void,
   onChartData?: (data: ChartData) => void,
   onFilesWritten?: (paths: string[]) => void,
+  onPlanStepUpdate?: (msgId: string, stepId: string, status: "in_progress" | "completed") => void,
   resumePlan?: Plan,
   isApprovalConfirmed?: boolean,
+  planMsgId?: string,
   options?: SupervisorAgentOptions
 ) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -199,11 +211,22 @@ export const supervisorAgent = async (
   let history: any[] = sessionState?.geminiHistory || [];
   const blockingIds = getBlockingIds();
 
+  const mode = options?.mode ?? AgentMode.AGENTIC;
+  setAgentContext(mode);
   const instruction = SUPERVISOR_SYSTEM({
     industry: options?.industry ?? industry,
     role: options?.role,
     customRules: options?.customRules,
+    mode,
+    hasMcpConnected: getConnectedMcpIds().length > 0,
   });
+
+  let toolDefinitions = toolRegistryService.getDefinitions();
+  if (mode === AgentMode.TRADITIONAL) {
+    toolDefinitions = toolDefinitions.filter((t) => (t as any).name !== "propose_plan");
+  }
+
+  const thinkingBudget = mode === AgentMode.DEEP_SEARCH ? 16000 : 8000;
 
   if (prompt || resumePlan) {
     let userText = prompt;
@@ -213,7 +236,6 @@ export const supervisorAgent = async (
     history.push({ role: "user", parts: [{ text: userText }] });
   }
 
-  const toolDefinitions = toolRegistryService.getDefinitions();
   let loopCount = 0;
   let currentTurnText = "";
   let thoughtStepId: string | null = null;
@@ -229,7 +251,7 @@ export const supervisorAgent = async (
         config: {
           systemInstruction: instruction,
           tools: [{ functionDeclarations: toolDefinitions }],
-          thinkingConfig: { thinkingBudget: 8000 },
+          thinkingConfig: { thinkingBudget },
         },
       })
     );
@@ -336,7 +358,14 @@ export const supervisorAgent = async (
         functionCalls,
         sessionId,
         blockingIds,
-        { onThinking, onPlanProposed, onChartData }
+        {
+          onThinking,
+          onPlanProposed,
+          onChartData,
+          onPlanStepUpdate: planMsgId && onPlanStepUpdate
+            ? (stepId, status) => onPlanStepUpdate(planMsgId, stepId, status)
+            : undefined,
+        }
       );
 
       if (writtenFilePaths.length > 0) {

@@ -4,12 +4,16 @@
  */
 import { Type } from "@google/genai";
 import { agentStateService } from "./agentStateService";
+import { todoService } from "./todoService";
 import { toolRegistryService, subAgentRegistryService } from "./registry";
 import {
   ANALYZE_REQUIREMENTS_PROMPT,
   PROPOSE_PLAN_SYSTEM,
   PROPOSE_PLAN_USER,
+  SELF_REFLECT_PROMPT,
 } from "./prompts";
+import { getAgentContext } from "./agentContext";
+import { toast } from "../utils/toast";
 import type { Plan, ChartData } from "../types";
 import { GoogleGenAI } from "@google/genai";
 
@@ -18,6 +22,146 @@ export function registerBuiltinTools(): void {
   const ai = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // --- Tools ---
+  toolRegistryService.register(
+    "create_todo",
+    {
+      definition: {
+        name: "create_todo",
+        description: "创建待办事项。参数：title、dueAt（可选，ISO 日期）、priority（可选：low/medium/high）。",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING, description: "待办标题" },
+            dueAt: { type: Type.STRING, description: "截止时间（ISO 8601）" },
+            priority: { type: Type.STRING, enum: ["low", "medium", "high"], description: "优先级" },
+          },
+          required: ["title"],
+        },
+      },
+      executor: (args) => {
+        const { title, dueAt, priority } = args as { title: string; dueAt?: string; priority?: "low" | "medium" | "high" };
+        const item = todoService.add(title, dueAt, priority);
+        toast(`已添加待办：${item.title}`);
+        return { status: "CREATED", id: item.id, title: item.title };
+      },
+    },
+    "builtin"
+  );
+
+  toolRegistryService.register(
+    "list_todos",
+    {
+      definition: {
+        name: "list_todos",
+        description: "列出待办事项。includeCompleted 为 true 时包含已完成。",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            includeCompleted: { type: Type.BOOLEAN, description: "是否包含已完成" },
+          },
+        },
+      },
+      executor: (args) => {
+        const { includeCompleted = false } = (args || {}) as { includeCompleted?: boolean };
+        const items = todoService.list(includeCompleted);
+        return { todos: items, count: items.length };
+      },
+    },
+    "builtin"
+  );
+
+  toolRegistryService.register(
+    "complete_todo",
+    {
+      definition: {
+        name: "complete_todo",
+        description: "将指定 ID 的待办标为已完成。",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            id: { type: Type.STRING, description: "待办 ID" },
+          },
+          required: ["id"],
+        },
+      },
+      executor: (args) => {
+        const { id } = args as { id: string };
+        const ok = todoService.complete(id);
+        if (ok) toast("待办已完成");
+        return ok ? { status: "COMPLETED", id } : { status: "NOT_FOUND", id };
+      },
+    },
+    "builtin"
+  );
+
+  toolRegistryService.register(
+    "search_knowledge",
+    {
+      definition: {
+        name: "search_knowledge",
+        description:
+          "从当前会话知识库检索相关分块。用于文档、长文本相关问题时获取上下文。若知识库为空则返回空结果。",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            query: { type: Type.STRING, description: "检索关键词或问题摘要" },
+            limit: { type: Type.NUMBER, description: "返回最大条数，默认 5" },
+          },
+          required: ["query"],
+        },
+      },
+      executor: (args, sessionId) => {
+        const { query, limit = 5 } = args as { query: string; limit?: number };
+        const chunks = agentStateService.getKnowledgeChunks(sessionId);
+        if (chunks.length === 0) return { matches: [], message: "知识库为空，请先在语义切片引擎中导入分块。" };
+        const keywords = query
+          .replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, " ")
+          .split(/\s+/)
+          .filter((w) => w.length > 0);
+        const scored = chunks.map((c) => {
+          let score = 0;
+          const text = `${c.content} ${c.summary}`.toLowerCase();
+          const qLower = query.toLowerCase();
+          if (text.includes(qLower)) score += 10;
+          for (const kw of keywords) {
+            if (kw.length > 1 && text.includes(kw.toLowerCase())) score += 2;
+          }
+          return { chunk: c, score };
+        });
+        const matches = scored
+          .filter((s) => s.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit)
+          .map((s) => s.chunk);
+        return { matches, total: chunks.length };
+      },
+    },
+    "builtin"
+  );
+
+  toolRegistryService.register(
+    "report_step_done",
+    {
+      definition: {
+        name: "report_step_done",
+        description:
+          "计划执行时，每完成一个步骤后调用，传入该步骤的 id（如 step-1）。用于更新计划进度。",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            stepId: { type: Type.STRING, description: "计划步骤 id，如 step-1" },
+          },
+          required: ["stepId"],
+        },
+      },
+      executor: (args) => {
+        const { stepId } = args as { stepId: string };
+        return { status: "OK", stepId };
+      },
+    },
+    "builtin"
+  );
+
   toolRegistryService.register(
     "get_current_date",
     {
@@ -89,9 +233,10 @@ export function registerBuiltinTools(): void {
       },
       executor: async (args, _sessionId, onProgress) => {
         const { context, domain } = args as { context: string; domain: string };
+        const { mode } = getAgentContext();
         const stream = await ai().models.generateContentStream({
           model: "gemini-3-flash-preview",
-          contents: [{ role: "user", parts: [{ text: ANALYZE_REQUIREMENTS_PROMPT(context, domain) }] }],
+          contents: [{ role: "user", parts: [{ text: ANALYZE_REQUIREMENTS_PROMPT(context, domain, mode) }] }],
         });
         let fullText = "";
         for await (const chunk of stream) {
@@ -203,7 +348,47 @@ export function registerBuiltinTools(): void {
           required: ["type", "title", "labels", "datasets"],
         },
       },
-      executor: (args) => args as ChartData,
+      executor: (args) => args as unknown as ChartData,
+    },
+    "builtin"
+  );
+
+  toolRegistryService.register(
+    "self_reflect",
+    {
+      definition: {
+        name: "self_reflect",
+        description:
+          "对当前输出做自检，返回供 Agent 自行改进的要点。写操作或多步骤任务执行后可调用。若返回 improvements，Agent 须立即补充执行，不可呈现给用户。",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            outputSummary: { type: Type.STRING, description: "当前输出或执行结果的简要摘要" },
+            userRequest: { type: Type.STRING, description: "用户原始需求或目标" },
+          },
+          required: ["outputSummary", "userRequest"],
+        },
+      },
+      executor: async (args) => {
+        const { outputSummary, userRequest } = args as { outputSummary: string; userRequest: string };
+        const response = await ai().models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: [{ role: "user", parts: [{ text: SELF_REFLECT_PROMPT(outputSummary, userRequest) }] }],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                satisfied: { type: Type.BOOLEAN, description: "是否满足用户需求" },
+                gaps: { type: Type.ARRAY, items: { type: Type.STRING }, description: "遗漏点列表" },
+                improvements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "供 Agent 立即执行的改进动作" },
+              },
+              required: ["satisfied", "gaps", "improvements"],
+            },
+          },
+        });
+        return JSON.parse(response.text || "{}");
+      },
     },
     "builtin"
   );
