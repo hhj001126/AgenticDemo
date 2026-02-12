@@ -21,26 +21,6 @@ const NAV_ITEMS = [
 ] as const;
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, industry, setIndustry, mode, setMode }) => {
-  const [hasKey, setHasKey] = useState(false);
-
-  useEffect(() => {
-    const checkKey = async () => {
-      if (window.aistudio?.hasSelectedApiKey) {
-        const selected = await window.aistudio.hasSelectedApiKey();
-        setHasKey(selected);
-      }
-    };
-    checkKey();
-    const interval = setInterval(checkKey, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleOpenKey = async () => {
-    if (window.aistudio?.openSelectKey) {
-      await window.aistudio.openSelectKey();
-      setHasKey(true);
-    }
-  };
 
   return (
     <div className="w-64 bg-slate-900 text-slate-300 h-screen flex flex-col border-r border-slate-800">
@@ -51,18 +31,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, industry, se
         <span className="font-bold text-lg text-white tracking-tight">智能 Agent 系统</span>
       </div>
 
-      <div className="px-4 mb-4">
-        <ApiKeyStatus hasKey={hasKey} onOpenKey={handleOpenKey} />
-      </div>
-
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-              activeTab === item.id ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white text-slate-400'
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white text-slate-400'
+              }`}
           >
             <item.icon size={18} />
             <span className="font-medium text-sm">{item.label}</span>

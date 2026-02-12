@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Code, PieChart, ShieldCheck, Loader2 } from 'lucide-react';
+import { Code, PieChart, ShieldCheck, Loader2, FileText, Search, ListChecks, BarChart3, Scale, Briefcase, MessageSquare, Sparkles } from 'lucide-react';
 import { Industry, AgentMode, Message, Plan, VfsFile } from '../types';
 import { supervisorAgent } from '../services/geminiService';
 import { agentStateService } from '../services/agentStateService';
@@ -9,6 +9,7 @@ import {
   ChatHeader,
   ChatInput,
   QuickCommandGrid,
+  QuickCommandRow,
   MessageBubble,
   QuickCommand,
 } from './chat';
@@ -23,6 +24,14 @@ const QUICK_COMMANDS: QuickCommand[] = [
   { label: '执行业务需求分析', icon: PieChart, prompt: '分析 2024 年政企数字化转型的核心挑战并给出方案。' },
   { label: '生成财务营收图表', icon: PieChart, prompt: '生成一个过去五个季度的财务营收对比图表，包含收入与利润两个维度。' },
   { label: '安全合规审计', icon: ShieldCheck, prompt: '审计当前应用架构是否存在安全漏洞，并给出加固建议。' },
+  { label: '合同条款摘要', icon: FileText, prompt: '请对一份合同的关键条款进行摘要，并标出风险点。' },
+  { label: '深度检索分析', icon: Search, prompt: '对给定主题进行深度检索，汇总多源信息并给出结论。' },
+  { label: '任务计划拆解', icon: ListChecks, prompt: '将当前需求拆解为可执行的任务计划，并标注依赖与优先级。' },
+  { label: '业务数据可视化', icon: BarChart3, prompt: '根据业务数据生成合适的图表（柱状/折线/饼图）并做简要分析。' },
+  { label: '合规风险排查', icon: Scale, prompt: '从法律合规角度排查方案或文档中的风险，并给出整改建议。' },
+  { label: '竞品与方案对比', icon: Briefcase, prompt: '对比分析多个方案或竞品的优劣，给出选型建议。' },
+  { label: '会议纪要整理', icon: MessageSquare, prompt: '将会议记录整理成结构化纪要，包含结论与待办。' },
+  { label: '创意头脑风暴', icon: Sparkles, prompt: '针对给定主题进行头脑风暴，给出多种可行方案。' },
 ];
 
 const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
@@ -231,6 +240,9 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
           )}
         </div>
 
+        {messages.length > 0 && (
+          <QuickCommandRow commands={QUICK_COMMANDS} onSelect={(p) => handleSend(p)} />
+        )}
         <ChatInput
           value={input}
           onChange={setInput}
