@@ -1,18 +1,20 @@
 /**
- * 设计令牌 - 基于 theme-factory & frontend-design
- * 统一色彩、间距、圆角，便于主题切换
+ * 设计令牌 - Tech Control 主题
+ * 实际值定义在 theme/tech-control.css，此处为 Tailwind 类名映射
  */
 export const tokens = {
   colors: {
-    primary: 'indigo-600',
-    primaryMuted: 'indigo-50',
-    primaryDark: 'indigo-900',
-    surface: 'white',
-    surfaceMuted: 'slate-50',
+    primary: 'primary',
+    primaryMuted: 'primary-50',
+    primaryDark: 'primary-700',
+    surface: 'surface',
+    surfaceMuted: 'surface-muted',
     border: 'slate-200',
     borderMuted: 'slate-100',
     text: 'slate-900',
+    textSecondary: 'slate-600',
     textMuted: 'slate-400',
+    textDisabled: 'slate-300',
     accent: {
       success: 'emerald',
       warning: 'amber',
@@ -20,15 +22,38 @@ export const tokens = {
       info: 'indigo',
     },
   },
+  spacing: {
+    xs: '1',   // 4px
+    sm: '2',   // 8px
+    md: '4',   // 16px
+    lg: '6',   // 24px
+    xl: '8',   // 32px
+  },
+  fontSize: {
+    xs: 'text-xs',    // 12px
+    sm: 'text-sm',    // 14px
+    base: 'text-base', // 16px
+    lg: 'text-lg',    // 18px
+    xl: 'text-xl',    // 20px
+  },
+  fontWeight: {
+    normal: 'font-normal',
+    medium: 'font-medium',
+    semibold: 'font-semibold',
+    bold: 'font-bold',
+    black: 'font-black',
+  },
   radius: {
-    sm: 'rounded-lg',
-    md: 'rounded-xl',
-    lg: 'rounded-2xl',
-    xl: 'rounded-[2rem]',
+    sm: 'rounded-sm',
+    md: 'rounded-md',
+    lg: 'rounded-lg',
+    xl: 'rounded-xl',
+    card: 'rounded-card',
+    input: 'rounded-input',
+    button: 'rounded-button',
   },
   shadow: {
-    card: 'shadow-xl',
-    subtle: 'shadow-sm',
-    strong: 'shadow-2xl',
+    subtle: 'shadow-subtle',
+    card: 'shadow-card',
   },
 } as const;

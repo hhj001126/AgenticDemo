@@ -1,0 +1,83 @@
+---
+description: UI 组件与样式规范，业务组件应遵循
+alwaysApply: true
+---
+
+# UI 设计系统与样式规范
+
+## 原则
+
+1. **业务组件不写自定义样式**：只使用 `components/ui/` 的原子组件和布局组合
+2. **条件类名用 cn**：禁止模板字符串、三元运算符拼接 className
+3. **className 放末尾**：组件内 `cn('base', ..., className)` 便于外部覆盖
+
+## 目录结构
+
+```
+components/
+  ui/           # 原子 UI 组件（唯一合法写 Tailwind 的地方）
+  chat/         # 业务组件：只组合 ui/*，不写 className
+  sidebar/
+  ...
+utils/
+  classnames.ts # cn(...) 条件类名工具
+theme/
+  tokens.ts     # 设计 token 引用
+```
+
+## 必须使用的 UI 组件
+
+| 场景 | 使用组件 | 示例 |
+|------|----------|------|
+| **布局** | `AppLayout`、`MainContent`、`PageContainer`、`ChatPanelLayout` | `<AppLayout sidebar={...}><MainContent>...</MainContent></AppLayout>` |
+| 按钮 | `Button` | `<Button variant="primary">确认</Button>` |
+| 徽章/标签 | `Badge` | `<Badge variant="success">Auto</Badge>` |
+| 卡片容器 | `Card`、`Surface`、`PageContainer` | `<PageContainer padding="md">...</PageContainer>` |
+| 图标徽章 | `IconBadge` | `<IconBadge icon={Zap} variant="primary" />` |
+| 布局 | `Flex` | `<Flex direction="col" gap={4}>...</Flex>` |
+| 输入框 | `Input`、`Textarea`、`InputGroup` | `<InputGroup><Textarea /></InputGroup>` |
+
+## 条件类名规范
+
+```tsx
+// ❌ 禁止
+className={`${isActive ? 'bg-indigo-50' : 'bg-slate-50'} px-4`}
+className={`flex ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+
+// ✅ 正确
+import { cn } from '@/utils/classnames';
+className={cn('px-4', isActive ? 'bg-indigo-50' : 'bg-slate-50')}
+className={cn('flex', msg.role === 'user' ? 'flex-row-reverse' : 'flex-row')}
+```
+
+## 设计 Token（theme/tech-control.css）
+
+| 类别 | 变量示例 | Tailwind 用法 |
+|------|----------|---------------|
+| **色彩** | `--color-primary`、`--color-text-muted` | `text-primary`、`bg-surface-muted` |
+| **背景** | `--bg-app`、`--bg-sidebar` | `bg-sidebar`、`bg-surface` |
+| **字体** | `--font-display`、`--font-body` | `font-display`、`font-body` |
+| **间距** | `--space-1`～`--space-20`（4px 基线） | `p-4`、`gap-6`、`m-2` |
+| **字号** | `--text-xs`～`--text-3xl` | `text-sm`、`text-xl` |
+| **过渡** | `--transition-base`、`--ease-out` | `transition-theme`、`duration-base` |
+
+详见 `theme/tokens.ts` 与 `theme/tech-control.css`
+
+## 业务组件重构指引
+
+1. 将长 `className` 拆分为：布局（Flex / 网格）+ 语义（Button / Badge / Card）
+2. 用 `variant` / `size` 控制 UI 形态，而非内联样式
+3. 保留 `className` 仅用于极少数布局微调（如 `max-w-[92%]`），且需注释说明
+
+## 示例：QuickCommandRow 重构
+
+```tsx
+// ❌ 重构前：长 className、内联样式
+<button className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 ...">
+
+// ✅ 重构后：使用 Button + 语义化 variant
+<Button variant="muted" size="md" className="flex-shrink-0 whitespace-nowrap">
+  <cmd.icon size={16} className="text-slate-500 group-hover:text-indigo-600" />
+  <span>{cmd.label}</span>
+</Button>
+```

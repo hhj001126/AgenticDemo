@@ -103,17 +103,17 @@ export const ChatInput = memo<ChatInputProps>(({ value, onChange, onSend, isLoad
   };
 
   return (
-    <div className="p-4 border-t border-slate-100 bg-white relative">
+    <div className="p-4 border-t border-border-muted bg-surface relative">
       {showSlash && (
         <div
           ref={menuRef}
-          className="absolute bottom-full left-4 right-4 mb-1 py-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-10 max-h-64 overflow-auto"
+          className="absolute bottom-full left-4 right-4 mb-1 py-2 bg-surface border border-border rounded-card shadow-card z-10 max-h-64 overflow-auto"
         >
-          <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+          <div className="px-3 py-1.5 text-xs font-semibold text-text-muted flex items-center gap-1.5">
             <Zap size={12} /> 快捷指令
           </div>
           {filteredCommands.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-slate-400">无匹配指令</div>
+            <div className="px-4 py-2 text-sm text-text-muted">无匹配指令</div>
           ) : (
             filteredCommands.map((c, i) => (
               <button
@@ -121,17 +121,17 @@ export const ChatInput = memo<ChatInputProps>(({ value, onChange, onSend, isLoad
                 type="button"
                 onClick={() => applySlashCommand(c.template)}
                 className={`w-full text-left px-4 py-2.5 flex items-center gap-3 transition-colors ${
-                  i === slashIndex ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'
+                  i === slashIndex ? 'bg-primary-50 text-primary-700' : 'hover:bg-surface-muted text-text-secondary'
                 }`}
               >
-                <span className="text-indigo-500 font-mono text-sm">/{c.cmd}</span>
+                <span className="text-primary font-mono text-sm">/{c.cmd}</span>
                 <span className="text-sm">{c.label}</span>
               </button>
             ))
           )}
         </div>
       )}
-      <div className="flex items-end gap-3 bg-slate-50 p-2 rounded-[1.75rem] border-2 border-slate-100 focus-within:border-indigo-600 focus-within:bg-white transition-all duration-300">
+      <div className="flex items-end gap-3 bg-surface-muted p-2 rounded-input border-2 border-border-muted focus-within:border-primary focus-within:bg-surface transition-theme">
         <textarea
           ref={textareaRef}
           value={value}
@@ -141,12 +141,12 @@ export const ChatInput = memo<ChatInputProps>(({ value, onChange, onSend, isLoad
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           rows={1}
-          className="flex-1 max-h-32 bg-transparent border-none focus:ring-0 text-sm py-3 px-5 resize-none outline-none font-bold text-slate-800"
+          className="flex-1 max-h-32 bg-transparent border-none focus:ring-0 text-sm py-3 px-5 resize-none outline-none font-bold text-text"
         />
         <button
           onClick={onSend}
           disabled={!value.trim() || isLoading}
-          className="w-12 h-12 rounded-2xl bg-slate-900 text-white shadow-lg hover:bg-indigo-600 disabled:opacity-20 transition-all flex items-center justify-center transform active:scale-95"
+          className="w-12 h-12 rounded-2xl bg-slate-900 text-white shadow-lg hover:bg-primary disabled:opacity-20 transition-theme flex items-center justify-center transform active:scale-95"
         >
           {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
         </button>

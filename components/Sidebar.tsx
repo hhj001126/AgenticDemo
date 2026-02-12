@@ -23,12 +23,12 @@ const NAV_ITEMS = [
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, industry, setIndustry, mode, setMode }) => {
 
   return (
-    <div className="w-64 bg-slate-900 text-slate-300 h-screen flex flex-col border-r border-slate-800">
+    <div className="w-64 bg-sidebar text-slate-300 h-screen flex flex-col border-r border-sidebar-muted">
       <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20">
           <Box size={20} />
         </div>
-        <span className="font-bold text-lg text-white tracking-tight">智能 Agent 系统</span>
+        <span className="font-bold text-lg text-white tracking-tight font-display">智能 Agent 系统</span>
       </div>
 
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, industry, se
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-md' : 'hover:bg-slate-800 hover:text-white text-slate-400'
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-theme ${activeTab === item.id ? 'bg-primary text-white shadow-md' : 'hover:bg-sidebar-muted hover:text-white text-slate-400'
               }`}
           >
             <item.icon size={18} />

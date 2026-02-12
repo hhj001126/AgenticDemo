@@ -15,7 +15,7 @@ export const IndustryModeSelector = memo<IndustryModeSelectorProps>(({ industry,
       <select
         value={industry}
         onChange={(e) => setIndustry(e.target.value as Industry)}
-        className="w-full bg-slate-800 border-none rounded-md px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+        className="w-full bg-slate-800 border-none rounded-md px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-primary outline-none cursor-pointer transition-theme"
       >
         {Object.values(Industry).map((i) => (
           <option key={i} value={i}>
@@ -31,8 +31,8 @@ export const IndustryModeSelector = memo<IndustryModeSelectorProps>(({ industry,
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`text-left px-3 py-1.5 rounded text-[11px] transition-colors ${
-              mode === m ? 'bg-indigo-500/20 text-indigo-400 font-semibold' : 'hover:bg-slate-800 text-slate-500'
+            className={`text-left px-3 py-1.5 rounded text-[11px] transition-theme ${
+              mode === m ? 'bg-primary-500/20 text-primary font-semibold' : 'hover:bg-slate-800 text-slate-500'
             }`}
           >
             {m}

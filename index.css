@@ -1,35 +1,120 @@
-/* 基础样式：Tailwind 由 CDN 提供，生产环境请使用 npm install + PostCSS 构建 */
-body { font-family: 'Inter', sans-serif; }
-.mono { font-family: 'JetBrains Mono', monospace; }
+@import './theme/tech-control.css';
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========== 全局基础样式（使用主题变量）========== */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: var(--bg-app-fallback);
+  background: var(--bg-app);
+  transition: color var(--transition-base) var(--ease-out),
+    background var(--transition-base) var(--ease-out);
+}
+
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }
+.mono { font-family: var(--font-mono); }
+
+/* ========== 滚动条（主题色）========== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
-.custom-scrollbar::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
-}
+.custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--color-border);
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--color-text-muted);
 }
 
-.markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
-.markdown-body th { background: #f8fafc; text-align: left; padding: 0.75rem; border: 1px solid #e2e8f0; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; }
-.markdown-body td { padding: 0.75rem; border: 1px solid #e2e8f0; }
-.markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin: 1rem 0; }
-.markdown-body p { margin: 0.75rem 0; }
-.markdown-body h2 { font-size: 1.25rem; font-weight: 800; margin-top: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; }
+/* ========== Markdown 内容（主题变量）========== */
+.markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: var(--text-sm); }
+.markdown-body th {
+  background: var(--color-surface-muted);
+  text-align: left;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  font-size: var(--text-xs);
+}
+.markdown-body td { padding: var(--space-3); border: 1px solid var(--color-border); }
+.markdown-body ul { list-style-type: disc; padding-left: var(--space-6); margin: 1rem 0; }
+.markdown-body p { margin: var(--space-3) 0; }
+.markdown-body h2 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-black);
+  margin-top: var(--space-6);
+  border-bottom: 2px solid var(--color-border-muted);
+  padding-bottom: var(--space-2);
+}
 
+/* ========== 应用背景（渐变 + 降级）========== */
+.app-bg {
+  background: var(--bg-app-fallback);
+  background: var(--bg-app);
+}
+
+/* ========== 主题色强制应用（确保 Tailwind 类生效）========== */
+@layer utilities {
+  .bg-primary { background-color: var(--color-primary); }
+  .bg-primary-50 { background-color: var(--color-primary-50); }
+  .bg-primary-100 { background-color: var(--color-primary-100); }
+  .bg-primary-500 { background-color: var(--color-primary-500); }
+  .bg-primary-700 { background-color: var(--color-primary-700); }
+  .text-primary { color: var(--color-primary); }
+  .text-primary-700 { color: var(--color-primary-700); }
+  .border-primary { border-color: var(--color-primary); }
+  .border-primary-50 { border-color: var(--color-primary-50); }
+  .border-primary-100 { border-color: var(--color-primary-100); }
+  .bg-surface { background-color: var(--color-surface); }
+  .bg-surface-muted { background-color: var(--color-surface-muted); }
+  .text-text { color: var(--color-text); }
+  .text-text-secondary { color: var(--color-text-secondary); }
+  .text-text-muted { color: var(--color-text-muted); }
+  .border-border { border-color: var(--color-border); }
+  .border-border-muted { border-color: var(--color-border-muted); }
+  .hover\:border-primary:hover { border-color: var(--color-primary); }
+  .hover\:text-primary:hover { color: var(--color-primary); }
+  .hover\:bg-primary:hover { background-color: var(--color-primary); }
+  .hover\:bg-primary-50:hover { background-color: var(--color-primary-50); }
+  .focus\:ring-primary:focus { --tw-ring-color: var(--color-primary); }
+  .rounded-card { border-radius: var(--radius-card); }
+  .rounded-input { border-radius: var(--radius-input); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-subtle { box-shadow: var(--shadow-subtle); }
+}
+
+/* ========== 过渡工具类 ========== */
+.transition-theme {
+  transition: color var(--transition-base) var(--ease-out),
+    background var(--transition-base) var(--ease-out),
+    border-color var(--transition-base) var(--ease-out),
+    box-shadow var(--transition-base) var(--ease-out);
+}
+
+/* ========== 动画 ========== */
 @keyframes progress {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }

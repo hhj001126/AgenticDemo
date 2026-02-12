@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { cn } from '../../utils/classnames';
 
 interface CardProps {
   children: React.ReactNode;
@@ -9,9 +10,14 @@ interface CardProps {
 
 const paddingMap = { none: '', sm: 'p-4', md: 'p-6', lg: 'p-8' };
 
-export const Card = memo<CardProps>(({ children, className = '', padding = 'md', bordered = true }) => (
+export const Card = memo<CardProps>(({ children, className, padding = 'md', bordered = true }) => (
   <div
-    className={`bg-white ${paddingMap[padding]} rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden ${bordered ? 'border-slate-200' : 'border-transparent'} ${className}`}
+    className={cn(
+      'bg-white rounded-card shadow-xl overflow-hidden',
+      paddingMap[padding],
+      bordered ? 'border border-border' : 'border-transparent',
+      className
+    )}
   >
     {children}
   </div>

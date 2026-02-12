@@ -4,6 +4,7 @@ import { Industry, AgentMode, Message, Plan, VfsFile } from '../types';
 import { supervisorAgent } from '../services/geminiService';
 import { agentStateService } from '../services/agentStateService';
 import CodeWorkspace from './CodeWorkspace';
+import { ChatPanelLayout } from './ui';
 import {
   PlanView,
   ChatHeader,
@@ -193,75 +194,65 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
   };
 
   return (
-    <div className="flex h-full gap-4 overflow-hidden">
-      <div
-        className={`flex flex-col h-full bg-white rounded-[2rem] border border-slate-200 overflow-hidden transition-all duration-500 ${showWorkspace ? 'w-[45%]' : 'w-full'}`}
-      >
-        <ChatHeader
-          industry={industry}
-          mode={mode}
-          showWorkspace={showWorkspace}
-          onToggleWorkspace={() => setShowWorkspace(!showWorkspace)}
-          onClearSession={handleClearSession}
-          onRefresh={() => {
-            loadState(sessionId);
-            setIsLoading(true);
-            setTimeout(() => setIsLoading(false), 500);
-          }}
-        />
-
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 bg-slate-50/20">
-          {messages.length === 0 && <QuickCommandGrid commands={QUICK_COMMANDS} onSelect={(p) => handleSend(p)} />}
-
-          {messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              msg={msg}
-              vfs={vfs}
-              onFileClick={(path) => {
-                setShowWorkspace(true);
-                setActiveFilePath(path);
-              }}
-              onFileDetailClick={(path) => {
-                setShowWorkspace(true);
-                setActiveFilePath(path);
-              }}
-              onToggleFold={togglePlanFold}
-              onToggleStep={toggleStepApproval}
-              onConfirm={(p) => handleSend(undefined, p, true)}
-            />
-          ))}
-
-          {isLoading && !messages.some((m) => m.isAwaitingApproval) && (
-            <div className="flex items-center gap-3 text-slate-400 ml-12 animate-pulse">
-              <Loader2 size={18} className="animate-spin text-indigo-500" />
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">正在协同算力资源编排指令...</span>
-            </div>
-          )}
-        </div>
-
-        {messages.length > 0 && (
-          <QuickCommandRow commands={QUICK_COMMANDS} onSelect={(p) => handleSend(p)} />
-        )}
-        <ChatInput
-          value={input}
-          onChange={setInput}
-          onSend={() => handleSend()}
-          isLoading={isLoading}
-          placeholder={
-            messages.some((m) => m.isAwaitingApproval)
-              ? '输入反馈以调整计划，或直接点击上方确认执行...'
-              : '输入任务指令或业务需求...'
-          }
-        />
-      </div>
-
-      {showWorkspace && (
-        <div className="flex-1 h-full min-w-0">
-          <CodeWorkspace files={vfs} onClose={() => setShowWorkspace(false)} activeFileOverride={activeFilePath} />
-        </div>
-      )}
-    </div>
+    <ChatPanelLayout
+      showWorkspace={showWorkspace}
+      chat={
+        <>
+          <ChatHeader
+            industry={industry}
+            mode={mode}
+            showWorkspace={showWorkspace}
+            onToggleWorkspace={() => setShowWorkspace(!showWorkspace)}
+            onClearSession={handleClearSession}
+            onRefresh={() => {
+              loadState(sessionId);
+              setIsLoading(true);
+              setTimeout(() => setIsLoading(false), 500);
+            }}
+          />
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 bg-surface-muted/20">
+            {messages.length === 0 && <QuickCommandGrid commands={QUICK_COMMANDS} onSelect={(p) => handleSend(p)} />}
+            {messages.map((msg) => (
+              <MessageBubble
+                key={msg.id}
+                msg={msg}
+                vfs={vfs}
+                onFileClick={(path) => {
+                  setShowWorkspace(true);
+                  setActiveFilePath(path);
+                }}
+                onFileDetailClick={(path) => {
+                  setShowWorkspace(true);
+                  setActiveFilePath(path);
+                }}
+                onToggleFold={togglePlanFold}
+                onToggleStep={toggleStepApproval}
+                onConfirm={(p) => handleSend(undefined, p, true)}
+              />
+            ))}
+            {isLoading && !messages.some((m) => m.isAwaitingApproval) && (
+              <div className="flex items-center gap-3 text-text-muted ml-12 animate-pulse">
+                <Loader2 size={18} className="animate-spin text-primary" />
+                <span className="text-[11px] font-black uppercase tracking-[0.2em]">正在协同算力资源编排指令...</span>
+              </div>
+            )}
+          </div>
+          {messages.length > 0 && <QuickCommandRow commands={QUICK_COMMANDS} onSelect={(p) => handleSend(p)} />}
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            onSend={() => handleSend()}
+            isLoading={isLoading}
+            placeholder={
+              messages.some((m) => m.isAwaitingApproval)
+                ? '输入反馈以调整计划，或直接点击上方确认执行...'
+                : '输入任务指令或业务需求...'
+            }
+          />
+        </>
+      }
+      workspace={<CodeWorkspace files={vfs} onClose={() => setShowWorkspace(false)} activeFileOverride={activeFilePath} />}
+    />
   );
 };
 

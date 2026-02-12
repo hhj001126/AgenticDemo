@@ -1,4 +1,5 @@
 import React, { memo, useState } from 'react';
+import { Button } from '../ui';
 import type { QuickCommand } from './QuickCommandGrid';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -19,18 +20,19 @@ export const QuickCommandRow = memo<QuickCommandRowProps>(({ commands, onSelect 
   const [shuffled] = useState(() => shuffle(commands));
 
   return (
-    <div className="flex-shrink-0 px-4 border-t border-slate-100 bg-white">
+    <div className="flex-shrink-0 px-4 border-t border-border-muted bg-surface">
       <div className="flex gap-2 overflow-x-auto py-2 -mx-1 px-1 overflow-y-hidden" style={{ scrollbarGutter: 'stable' }}>
         {shuffled.map((cmd) => (
-          <button
+          <Button
             key={cmd.label}
-            type="button"
+            variant="muted"
+            size="md"
             onClick={() => onSelect(cmd.prompt)}
-            className="flex items-center gap-2 flex-shrink-0 px-2 py-1 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-all text-sm font-medium whitespace-nowrap"
+            className="flex-shrink-0 whitespace-nowrap group"
           >
-            <cmd.icon size={16} className="text-slate-500 group-hover:text-indigo-600" />
+            <cmd.icon size={16} className="text-text-muted group-hover:text-primary" />
             <span>{cmd.label}</span>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

@@ -34,9 +34,9 @@ AgenticDemo/
 │   ├── ThinkingProcess.tsx # 思考过程可视化
 │   ├── VectorDatabase.tsx # 向量化资产管理
 │   ├── VisualChart.tsx  # 图表渲染
-│   ├── ui/              # 基础 UI 组件
-│   │   ├── Card.tsx
-│   │   └── IconBadge.tsx
+│   ├── ui/              # 原子 UI 组件（唯一合法写 Tailwind 的地方）
+│   │   ├── Badge.tsx、Button.tsx、Card.tsx、Flex.tsx
+│   │   ├── IconBadge.tsx、Input.tsx、Surface.tsx
 │   ├── chat/            # 对话相关子组件
 │   │   ├── PlanView.tsx、ChatHeader.tsx、ChatInput.tsx
 │   │   ├── MessageBubble.tsx、MarkdownWithCharts.tsx、QuickCommandGrid.tsx
@@ -70,6 +70,7 @@ AgenticDemo/
 - 状态持久化通过 `localStorage`（如 `agent_orchestrator_app_state`）
 - API Key 通过 `.env.local` 中的 `GEMINI_API_KEY` 配置
 - UI 风格：Tailwind 类名，圆角、阴影、indigo 主色
+- **UI 规范**：业务组件禁止自定义 className，使用 `components/ui/` 原子组件；条件类名用 `cn` 工具（见 `.cursor/rules/UI-Design-System.mdc`）
 
 ## 运行方式
 

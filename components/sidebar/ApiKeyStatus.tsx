@@ -17,8 +17,8 @@ export const ApiKeyStatus = memo<ApiKeyStatusProps>(({ hasKey, onOpenKey }) => (
     </p>
     <button
       onClick={onOpenKey}
-      className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${
-        hasKey ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-900/20'
+      className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase transition-theme ${
+        hasKey ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-primary text-white hover:bg-primary-500 shadow-lg shadow-primary/20'
       }`}
     >
       <Key size={12} />
@@ -29,7 +29,7 @@ export const ApiKeyStatus = memo<ApiKeyStatusProps>(({ hasKey, onOpenKey }) => (
         href="https://ai.google.dev/gemini-api/docs/billing"
         target="_blank"
         rel="noreferrer"
-        className="mt-2 block text-center text-[9px] text-slate-500 hover:text-indigo-400 underline"
+        className="mt-2 block text-center text-[9px] text-slate-500 hover:text-primary underline"
       >
         了解计费与配额限制
       </a>

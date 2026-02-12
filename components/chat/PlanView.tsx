@@ -16,15 +16,15 @@ export const PlanView = memo<PlanViewProps>(({ plan, msgId, isAwaitingApproval, 
   const toggle = () => onToggleFold?.(msgId);
 
   return (
-    <div className="w-full bg-white border border-indigo-100 rounded-[2rem] shadow-xl shadow-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-500 border-2">
-      <div onClick={toggle} className="flex items-center justify-between gap-2 px-5 py-3 cursor-pointer hover:bg-slate-50 transition-colors border-b border-indigo-50 bg-indigo-50/30">
+    <div className="w-full bg-surface border border-primary-100 rounded-card shadow-card overflow-hidden animate-in fade-in zoom-in-95 duration-500 border-2">
+      <div onClick={toggle} className="flex items-center justify-between gap-2 px-5 py-3 cursor-pointer hover:bg-surface-muted transition-theme border-b border-primary-50 bg-primary-50/30">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-lg">
+          <div className="p-2 bg-primary text-white rounded-xl shadow-lg">
             <ListChecks size={20} />
           </div>
           <div>
             <h4 className="text-xs font-black text-slate-900 uppercase tracking-tight">{plan.title}</h4>
-            <span className="text-[10px] text-indigo-600 font-bold uppercase">{plan.steps.length} 阶段编排就绪</span>
+            <span className="text-[10px] text-primary font-bold uppercase">{plan.steps.length} 阶段编排就绪</span>
           </div>
         </div>
         {isCollapsed ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronUp size={18} className="text-slate-400" />}
@@ -35,12 +35,12 @@ export const PlanView = memo<PlanViewProps>(({ plan, msgId, isAwaitingApproval, 
             {plan.steps.map((s) => (
               <div
                 key={s.id}
-                className={`flex items-start gap-4 p-4 rounded-[1.25rem] transition-all border ${isAwaitingApproval && s.requiresApproval ? 'bg-white border-slate-200 cursor-pointer hover:border-indigo-400 hover:shadow-md' : 'bg-slate-50 border-slate-100'} ${!s.approved ? 'opacity-50' : ''}`}
+                className={`flex items-start gap-4 p-4 rounded-[1.25rem] transition-all border ${isAwaitingApproval && s.requiresApproval ? 'bg-surface border-border cursor-pointer hover:border-primary hover:shadow-md' : 'bg-surface-muted border-border-muted'} ${!s.approved ? 'opacity-50' : ''}`}
                 onClick={() => isAwaitingApproval && s.requiresApproval && onToggleStep(msgId, s.id)}
               >
                 <div className="mt-0.5 flex-shrink-0">
                   {isAwaitingApproval ? (
-                    s.approved ? <CheckSquare size={18} className="text-indigo-600" /> : <Square size={18} className="text-slate-300" />
+                    s.approved ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} className="text-slate-300" />
                   ) : (
                     s.approved ? <CheckCircle2 size={18} className="text-emerald-500" /> : <AlertCircle size={18} className="text-slate-300" />
                   )}
@@ -53,7 +53,7 @@ export const PlanView = memo<PlanViewProps>(({ plan, msgId, isAwaitingApproval, 
                         <Zap size={8} /> Auto
                       </div>
                     ) : (
-                      <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${s.approved ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+                      <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${s.approved ? 'bg-primary-50 text-primary-700' : 'bg-amber-50 text-amber-600'}`}>
                         <User size={8} /> {s.approved ? 'Approved' : 'Review'}
                       </div>
                     )}
@@ -68,12 +68,12 @@ export const PlanView = memo<PlanViewProps>(({ plan, msgId, isAwaitingApproval, 
           </div>
           {isAwaitingApproval && (
             <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
-              <div className="flex items-center gap-3 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
-                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><Clock size={16} /></div>
-                <p className="text-[11px] font-bold text-indigo-800">当前任务处于挂起状态。您可以手动勾选步骤进行授权，或在下方输入补充调整建议来优化此计划。</p>
+              <div className="flex items-center gap-3 bg-primary-50/50 p-4 rounded-card border border-primary-100">
+                <div className="p-2 bg-primary-100 text-primary rounded-lg"><Clock size={16} /></div>
+                <p className="text-[11px] font-bold text-primary-700">当前任务处于挂起状态。您可以手动勾选步骤进行授权，或在下方输入补充调整建议来优化此计划。</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => onConfirm(plan)} className="w-full bg-slate-900 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl flex items-center justify-center gap-2"><CheckCircle size={16} /> 确认并开始执行</button>
+                <button onClick={() => onConfirm(plan)} className="w-full bg-slate-900 text-white py-4 rounded-card text-[11px] font-black uppercase tracking-widest hover:bg-primary transition-theme shadow-card flex items-center justify-center gap-2"><CheckCircle size={16} /> 确认并开始执行</button>
               </div>
             </div>
           )}

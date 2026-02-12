@@ -19,7 +19,7 @@ export interface MessageBubbleProps {
 
 export const MessageBubble = memo<MessageBubbleProps>(({ msg, onFileClick, onFileDetailClick, vfs = {}, onToggleFold, onToggleStep, onConfirm }) => (
   <div className={`mb-4 flex ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white'}`}>
+    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-slate-900 text-white'}`}>
       {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
     </div>
     <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} gap-3 max-w-[92%]`}>
@@ -27,7 +27,7 @@ export const MessageBubble = memo<MessageBubbleProps>(({ msg, onFileClick, onFil
         <ThinkingProcess steps={msg.thinkingSteps} onFileClick={onFileClick} onFileDetailClick={onFileDetailClick} vfs={vfs} />
       )}
       {msg.content && (
-        <div className={`px-5 rounded-[1.5rem] shadow-sm border ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border-slate-100'}`}>
+        <div className={`px-5 rounded-[1.5rem] shadow-sm border ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-surface text-text rounded-tl-none border-border-muted'}`}>
           {msg.role === 'user' ? (
             <div className="markdown-body text-sm font-medium leading-relaxed [&_*]:text-inherit">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
