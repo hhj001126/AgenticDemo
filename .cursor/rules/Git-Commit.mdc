@@ -1,0 +1,49 @@
+---
+description: Git 提交规范与注意事项
+alwaysApply: true
+---
+
+# Git 提交规范
+
+## 提交信息格式
+
+```
+<type>: <subject>
+
+<body>
+```
+
+- **type**：feat | fix | docs | style | refactor | test | chore
+- **subject**：简短说明，中文或英文，结尾不加句号
+- **body**（可选）：详细说明，每行一条
+
+## 类型说明
+
+| type     | 说明         |
+|----------|--------------|
+| feat     | 新功能       |
+| fix      | 修复 bug     |
+| docs     | 文档         |
+| style    | 格式/样式    |
+| refactor | 重构         |
+| test     | 测试         |
+| chore    | 构建/工具等  |
+
+## 注意事项
+
+1. **编码**：提交信息使用 **UTF-8**，避免中文乱码。
+   - Windows 下提交前可在终端执行：`chcp 65001`
+   - 或设置：`git config --global i18n.commitEncoding utf-8` 与 `git config --global i18n.logOutputEncoding utf-8`
+
+2. **语言**：subject 与 body 统一用中文或英文，不要混用。
+
+3. **长度**：subject 建议 50 字以内，body 每行 72 字以内。
+
+4. **示例**：
+   ```
+   feat: UI 设计系统与 Tech Control 主题
+
+   - 新增 cn 工具、设计 token、Tech Control 主题样式
+   - 扩展 UI 组件与 Layout
+   - 业务组件统一使用主题变量
+   ```
