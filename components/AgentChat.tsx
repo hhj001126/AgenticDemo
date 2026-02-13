@@ -4,7 +4,7 @@ import { Industry, AgentMode, Message, Plan, VfsFile } from '../types';
 import { supervisorAgent } from '../services/geminiService';
 import { agentStateService } from '../services/agentStateService';
 import CodeWorkspace from './CodeWorkspace';
-import { ChatPanelLayout } from './ui';
+import { ChatPanelLayout, useConfirm } from './ui';
 import {
   PlanView,
   ChatHeader,
@@ -16,8 +16,11 @@ import {
 } from './chat';
 
 interface AgentChatProps {
+  sessionId: string;
   industry: Industry;
   mode: AgentMode;
+  onSessionChange?: (sessionId: string) => void;
+  onSessionContentChange?: () => void;
 }
 
 const QUICK_COMMANDS: QuickCommand[] = [
@@ -35,21 +38,34 @@ const QUICK_COMMANDS: QuickCommand[] = [
   { label: '创意头脑风暴', icon: Sparkles, prompt: '针对给定主题进行头脑风暴，给出多种可行方案。' },
 ];
 
-const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
+const TITLE_MAX_LEN = 28;
+
+const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSessionChange, onSessionContentChange }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
   const [vfs, setVfs] = useState<Record<string, VfsFile>>({});
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const confirm = useConfirm();
+
+  const loadState = useCallback((id: string) => {
+    const saved = agentStateService.getSession(id);
+    if (saved) {
+      if (saved.uiMessages) setMessages(saved.uiMessages);
+      if (saved.vfs) setVfs(saved.vfs);
+    } else {
+      setMessages([]);
+      setVfs({});
+    }
+  }, []);
 
   useEffect(() => {
-    const id = agentStateService.initializeSession();
-    setSessionId(id);
-    loadState(id);
+    loadState(sessionId);
+  }, [sessionId, loadState]);
 
+  useEffect(() => {
     const handleVfsUpdate = (e: Event) => {
       const ev = e as CustomEvent<Record<string, VfsFile>>;
       setVfs(ev.detail || {});
@@ -58,14 +74,6 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
     window.addEventListener('vfs-updated', handleVfsUpdate);
     return () => window.removeEventListener('vfs-updated', handleVfsUpdate);
   }, []);
-
-  const loadState = (id: string) => {
-    const saved = agentStateService.getSession(id);
-    if (saved) {
-      if (saved.uiMessages) setMessages(saved.uiMessages);
-      if (saved.vfs) setVfs(saved.vfs);
-    }
-  };
 
   useEffect(() => {
     if (sessionId && messages.length > 0) {
@@ -115,7 +123,15 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
 
     if (!isConfirmAction && !isRefiningPlan) {
       const userMsg: Message = { id: Date.now().toString(), role: 'user', content: textToSend, timestamp: Date.now() };
-      setMessages((prev) => [...prev, userMsg]);
+      setMessages((prev) => {
+        const next = [...prev, userMsg];
+        if (prev.length === 0) {
+          const title = textToSend.length > TITLE_MAX_LEN ? textToSend.slice(0, TITLE_MAX_LEN) + '…' : textToSend;
+          agentStateService.updateSessionTitle(sessionId, title);
+          onSessionContentChange?.();
+        }
+        return next;
+      });
       setInput('');
     } else if (isConfirmAction) {
       setMessages((prev) =>
@@ -209,11 +225,18 @@ const AgentChat: React.FC<AgentChatProps> = ({ industry, mode }) => {
     }
   };
 
-  const handleClearSession = () => {
-    if (window.confirm('确定要清空会话吗？')) {
-      agentStateService.clearSession(sessionId);
-      window.location.reload();
-    }
+  const handleClearSession = async () => {
+    const ok = await confirm({
+      title: '清空会话',
+      message: '确定要清空当前会话吗？消息与工作区内容将被重置，此操作不可恢复。',
+      danger: true,
+      confirmText: '清空',
+      cancelText: '取消'
+    });
+    if (!ok) return;
+    agentStateService.clearSessionContent(sessionId);
+    loadState(sessionId);
+    onSessionContentChange?.();
   };
 
   return (

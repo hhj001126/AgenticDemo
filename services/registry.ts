@@ -3,6 +3,7 @@
  * 用户可通过标准化接口注册自定义工具或子代理
  */
 import { Type, FunctionDeclaration } from "@google/genai";
+import { toolEnableService } from "./toolEnableService";
 import type {
   ToolDefinition,
   SubAgentDefinition,
@@ -99,6 +100,9 @@ export const toolRegistryService = {
     sessionId: string,
     onProgress?: (content: string) => void
   ): Promise<unknown> {
+    if (!toolEnableService.getToolEnabled(id)) {
+      return { error: "ToolDisabled", id };
+    }
     const tool = toolRegistry.get(id)?.item;
     if (!tool) return { error: "ToolNotFound", id };
     return tool.executor(args, sessionId, onProgress);

@@ -8,4 +8,6 @@ export { IconBadge } from './IconBadge';
 export { Input, InputGroup, InputGroupWithButton, Textarea } from './Input';
 export { AppLayout, MainContent, PageContainer, ChatPanelLayout } from './Layout';
 export { Surface } from './Surface';
+export { Switch } from './Switch';
+export type { SwitchProps } from './Switch';
 export { ToastProvider } from './Toast';

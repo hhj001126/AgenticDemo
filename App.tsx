@@ -6,6 +6,7 @@ import TodoListPage from './components/tools/TodoListPage';
 import McpConnectionManager from './components/tools/McpConnectionManager';
 import SemanticChunker from './components/SemanticChunker';
 import VectorDatabase from './components/VectorDatabase';
+import { agentStateService } from './services/agentStateService';
 import { AppLayout, MainContent, PageContainer, ConfirmProvider, ToastProvider } from './components/ui';
 import { Industry, AgentMode } from './types';
 
@@ -27,6 +28,13 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved).mode : AgentMode.AGENTIC;
   });
 
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => {
+    const id = agentStateService.initializeSession();
+    return id;
+  });
+
+  const [sessionListVersion, setSessionListVersion] = useState(0);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_APP_STATE, JSON.stringify({ activeTab, industry, mode }));
   }, [activeTab, industry, mode]);
@@ -34,7 +42,15 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <AgentChat industry={industry} mode={mode} />;
+        return (
+          <AgentChat
+            sessionId={activeSessionId}
+            industry={industry}
+            mode={mode}
+            onSessionChange={setActiveSessionId}
+            onSessionContentChange={() => setSessionListVersion((v) => v + 1)}
+          />
+        );
       case 'todos':
         return <TodoListPage />;
       case 'tools':
@@ -57,14 +73,17 @@ const App: React.FC = () => {
       <AppLayout
         sidebar={
           <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          industry={industry}
-          setIndustry={setIndustry}
-          mode={mode}
-          setMode={setMode}
-        />
-      }
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            activeSessionId={activeTab === 'dashboard' ? activeSessionId : null}
+            onSwitchSession={setActiveSessionId}
+            sessionListVersion={sessionListVersion}
+            industry={industry}
+            setIndustry={setIndustry}
+            mode={mode}
+            setMode={setMode}
+          />
+        }
     >
       <MainContent>{renderContent()}</MainContent>
       </AppLayout>

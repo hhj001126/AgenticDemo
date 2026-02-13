@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Wrench, Package, Network, Link2, Unlink, Plus, Trash2, AlertCircle, Server, Zap, Loader2, ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import { toolRegistryService } from "../../services/geminiService";
+import { toolEnableService } from "../../services/toolEnableService";
 import {
   getStoredMcpServers,
   getConnectedMcpIds,
@@ -23,6 +24,7 @@ import {
   Flex,
   Input,
   InputGroup,
+  Switch,
   useConfirm,
 } from "../ui";
 import { cn } from "../../utils/classnames";
@@ -58,6 +60,8 @@ interface ToolCardProps {
   description: string;
   source: RegistrySource;
   blocking?: boolean;
+  enabled: boolean;
+  onToggle: () => void;
 }
 
 const ToolCard: React.FC<ToolCardProps> = ({
@@ -66,13 +70,16 @@ const ToolCard: React.FC<ToolCardProps> = ({
   description,
   source,
   blocking,
+  enabled,
+  onToggle,
 }) => (
   <Card
     padding="md"
     className={cn(
       "group transition-all duration-200",
       "hover:shadow-md hover:-translate-y-0.5",
-      "hover:border-primary-100 border-border"
+      "hover:border-primary-100 border-border",
+      !enabled && "opacity-70"
     )}
   >
     <Flex direction="col" gap={3}>
@@ -113,6 +120,15 @@ const ToolCard: React.FC<ToolCardProps> = ({
         </Flex>
       </Flex>
       <p className="text-xs text-text-muted line-clamp-2 leading-relaxed">{description}</p>
+      <Flex justify="end" align="center">
+        <Switch
+          checked={enabled}
+          onChange={onToggle}
+          checkedChildren="开"
+          unCheckedChildren="关"
+          aria-label={enabled ? "禁用该工具" : "启用该工具"}
+        />
+      </Flex>
     </Flex>
   </Card>
 );
@@ -421,6 +437,11 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
                       description={tool.definition?.description || ""}
                       source={source}
                       blocking={tool.blocking}
+                      enabled={toolEnableService.getToolEnabled(id)}
+                      onToggle={() => {
+                        toolEnableService.setToolEnabled(id, !toolEnableService.getToolEnabled(id));
+                        refreshTools();
+                      }}
                     />
                   ))}
                 </div>
@@ -565,6 +586,11 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
                           description={tool.definition?.description || ""}
                           source={source}
                           blocking={tool.blocking}
+                          enabled={toolEnableService.getToolEnabled(id)}
+                          onToggle={() => {
+                            toolEnableService.setToolEnabled(id, !toolEnableService.getToolEnabled(id));
+                            refreshTools();
+                          }}
                         />
                       ))}
                     </div>

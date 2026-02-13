@@ -3,6 +3,7 @@ import { Industry, ThinkingStep, Plan, ChartData, AgentRoleConfig, AgentMode } f
 import { agentStateService } from "./agentStateService";
 import { toolRegistryService } from "./registry";
 import { getConnectedMcpIds } from "./mcpService";
+import { toolEnableService } from "./toolEnableService";
 import { setAgentContext } from "./agentContext";
 import { SUPERVISOR_SYSTEM, SEMANTIC_CHUNKER_PROMPT } from "./prompts";
 import { registerBuiltinTools } from "./builtinTools";
@@ -221,7 +222,9 @@ export const supervisorAgent = async (
     hasMcpConnected: getConnectedMcpIds().length > 0,
   });
 
-  let toolDefinitions = toolRegistryService.getDefinitions();
+  let toolDefinitions = toolRegistryService
+    .getDefinitions()
+    .filter((t) => toolEnableService.getToolEnabled((t as any).name));
   if (mode === AgentMode.TRADITIONAL) {
     toolDefinitions = toolDefinitions.filter((t) => (t as any).name !== "propose_plan");
   }
