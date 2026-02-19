@@ -2,7 +2,7 @@
  * 向量库最小实现：localStorage + 简单全文匹配
  * Phase 1：无真实向量，使用关键词匹配
  */
-import type { KnowledgeChunk } from "./agentStateService";
+import type { KnowledgeChunk } from "../types";
 
 const STORAGE_KEY = "agent_vector_store";
 

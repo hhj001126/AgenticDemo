@@ -1,8 +1,12 @@
-/** 触发 Toast 提示（可从任意层调用，包括 tool executor） */
 export type ToastType = "success" | "error" | "info";
 
-export function toast(message: string, type: ToastType = "success"): void {
-  window.dispatchEvent(
-    new CustomEvent("toast", { detail: { message, type } })
-  );
-}
+export const toast = (message: string, type: ToastType = "info") => {
+  const event = new CustomEvent("toast", {
+    detail: { message, type },
+  });
+  window.dispatchEvent(event);
+};
+
+toast.success = (message: string) => toast(message, "success");
+toast.error = (message: string) => toast(message, "error");
+toast.info = (message: string) => toast(message, "info");

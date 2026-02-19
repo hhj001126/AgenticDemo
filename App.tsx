@@ -3,11 +3,10 @@ import Sidebar from './components/Sidebar';
 import AgentChat from './components/AgentChat';
 import ToolsManagerPage from './components/tools/ToolsManagerPage';
 import TodoListPage from './components/tools/TodoListPage';
-import McpConnectionManager from './components/tools/McpConnectionManager';
 import SemanticChunker from './components/SemanticChunker';
 import VectorDatabase from './components/VectorDatabase';
 import { agentStateService } from './services/agentStateService';
-import { AppLayout, MainContent, PageContainer, ConfirmProvider, ToastProvider } from './components/ui';
+import { AppLayout, MainContent, PageContainer, Flex, ConfirmProvider, ToastProvider } from './components/ui';
 import { Industry, AgentMode } from './types';
 
 const STORAGE_APP_STATE = 'agent_orchestrator_app_state';
@@ -28,10 +27,15 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved).mode : AgentMode.AGENTIC;
   });
 
-  const [activeSessionId, setActiveSessionId] = useState<string>(() => {
-    const id = agentStateService.initializeSession();
-    return id;
-  });
+  const [activeSessionId, setActiveSessionId] = useState<string>('');
+
+  useEffect(() => {
+    const init = async () => {
+      const id = await agentStateService.initializeSession();
+      setActiveSessionId(id);
+    };
+    init();
+  }, []);
 
   const [sessionListVersion, setSessionListVersion] = useState(0);
 
@@ -40,6 +44,9 @@ const App: React.FC = () => {
   }, [activeTab, industry, mode]);
 
   const renderContent = () => {
+    if (!activeSessionId) {
+      return <PageContainer><Flex align="center" justify="center" className="h-full">Loading Session...</Flex></PageContainer>;
+    }
     switch (activeTab) {
       case 'dashboard':
         return (
@@ -69,24 +76,23 @@ const App: React.FC = () => {
   return (
     <ConfirmProvider>
       <ToastProvider>
-      <McpConnectionManager />
-      <AppLayout
-        sidebar={
-          <Sidebar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            activeSessionId={activeTab === 'dashboard' ? activeSessionId : null}
-            onSwitchSession={setActiveSessionId}
-            sessionListVersion={sessionListVersion}
-            industry={industry}
-            setIndustry={setIndustry}
-            mode={mode}
-            setMode={setMode}
-          />
-        }
-    >
-      <MainContent>{renderContent()}</MainContent>
-      </AppLayout>
+        <AppLayout
+          sidebar={
+            <Sidebar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              activeSessionId={activeTab === 'dashboard' ? activeSessionId : null}
+              onSwitchSession={setActiveSessionId}
+              sessionListVersion={sessionListVersion}
+              industry={industry}
+              setIndustry={setIndustry}
+              mode={mode}
+              setMode={setMode}
+            />
+          }
+        >
+          <MainContent>{renderContent()}</MainContent>
+        </AppLayout>
       </ToastProvider>
     </ConfirmProvider>
   );

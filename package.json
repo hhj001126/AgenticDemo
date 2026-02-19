@@ -11,23 +11,37 @@
     "mcp:file-ops": "cd mcp/mcp-file-ops && uv sync && uv run python mcp_file_ops.py",
     "mcp:notes": "cd mcp/mcp-notes && uv sync && uv run python mcp_notes.py",
     "mcp:echo": "cd mcp/mcp-echo && uv sync && uv run python mcp_echo.py",
-    "mcp:time": "cd mcp/mcp-time && uv sync && uv run python mcp_time.py"
+    "mcp:time": "cd mcp/mcp-time && uv sync && uv run python mcp_time.py",
+    "mcp:youdu": "cd mcp/youdu_mcp && uv sync && uv run python run.py",
+    "build:server": "tsc -p server/tsconfig.json",
+    "server": "node dist-server/server/index.js"
   },
   "dependencies": {
-    "@google/genai": "^1.40.0",
+    "@google/genai": "^1.41.0",
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "fs-extra": "^11.3.3",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "^9.0.0",
     "remark-gfm": "^4.0.0",
-    "use-mcp": "^0.0.21"
+    "use-mcp": "^0.0.21",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.14.0",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
+    "ts-node": "^10.9.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

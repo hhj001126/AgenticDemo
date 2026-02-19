@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Code, PieChart, ShieldCheck, Loader2, FileText, Search, ListChecks, BarChart3, Scale, Briefcase, MessageSquare, Sparkles } from 'lucide-react';
-import { Industry, AgentMode, Message, Plan, VfsFile } from '../types';
-import { supervisorAgent } from '../services/geminiService';
+import { Industry, AgentMode, Message, Plan, VfsFile, ThinkingStep, ChartData } from '../types';
+import { useAgentSession } from '../hooks/useAgentSession';
 import { agentStateService } from '../services/agentStateService';
 import CodeWorkspace from './CodeWorkspace';
 import { ChatPanelLayout, useConfirm } from './ui';
 import {
-  PlanView,
   ChatHeader,
   ChatInput,
   QuickCommandGrid,
@@ -14,6 +13,7 @@ import {
   MessageBubble,
   QuickCommand,
 } from './chat';
+import { toast } from '../utils/toast';
 
 interface AgentChatProps {
   sessionId: string;
@@ -42,187 +42,32 @@ const TITLE_MAX_LEN = 28;
 
 const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSessionChange, onSessionContentChange }) => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [vfs, setVfs] = useState<Record<string, VfsFile>>({});
+  const { messages, isLoading, vfs, sendMessage, dispatch, loadState } = useAgentSession(sessionId, industry, mode);
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const confirm = useConfirm();
-
-  const loadState = useCallback((id: string) => {
-    const saved = agentStateService.getSession(id);
-    if (saved) {
-      if (saved.uiMessages) setMessages(saved.uiMessages);
-      if (saved.vfs) setVfs(saved.vfs);
-    } else {
-      setMessages([]);
-      setVfs({});
-    }
-  }, []);
-
-  useEffect(() => {
-    loadState(sessionId);
-  }, [sessionId, loadState]);
-
-  useEffect(() => {
-    const handleVfsUpdate = (e: Event) => {
-      const ev = e as CustomEvent<Record<string, VfsFile>>;
-      setVfs(ev.detail || {});
-      setShowWorkspace(true);
-    };
-    window.addEventListener('vfs-updated', handleVfsUpdate);
-    return () => window.removeEventListener('vfs-updated', handleVfsUpdate);
-  }, []);
-
-  useEffect(() => {
-    if (sessionId && messages.length > 0) {
-      agentStateService.syncUiState(sessionId, messages);
-    }
-  }, [messages, sessionId]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isLoading]);
 
   const toggleStepApproval = useCallback((msgId: string, stepId: string) => {
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id === msgId && m.plan) {
-          const newSteps = m.plan.steps.map((s) => (s.id === stepId ? { ...s, approved: !s.approved } : s));
-          return { ...m, plan: { ...m.plan, steps: newSteps } };
-        }
-        return m;
-      })
-    );
-  }, []);
+    dispatch({ type: 'TOGGLE_PLAN_STEP', msgId, stepId });
+  }, [dispatch]);
 
   const togglePlanFold = useCallback((msgId: string) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msgId && m.plan ? { ...m, plan: { ...m.plan, isCollapsed: !m.plan.isCollapsed } } : m))
-    );
-  }, []);
+    dispatch({ type: 'TOGGLE_PLAN_FOLD', msgId });
+  }, [dispatch]);
 
   const handleSend = async (customInput?: string, resumePlan?: Plan, isConfirmAction = false, planMsgId?: string) => {
-    const textToSend = customInput || input;
-    const isRefiningPlan = !isConfirmAction && messages.some((m) => m.isAwaitingApproval) && textToSend.trim();
-
-    if ((!textToSend.trim() && !isConfirmAction) || isLoading) return;
-
-    let targetPlan = resumePlan;
-    let contextualInput = textToSend;
-    
-    if (isRefiningPlan) {
-      const pendingMsg = [...messages].reverse().find((m) => m.isAwaitingApproval);
-      if (pendingMsg?.plan) {
-        targetPlan = pendingMsg.plan;
-        // 将用户输入作为上下文，结合原始计划
-        contextualInput = `用户补充指令：${textToSend}\n\n请基于以上补充调整计划 ${JSON.stringify(targetPlan)} 并执行。`;
-      }
-    }
-
-    if (!isConfirmAction && !isRefiningPlan) {
-      const userMsg: Message = { id: Date.now().toString(), role: 'user', content: textToSend, timestamp: Date.now() };
-      setMessages((prev) => {
-        const next = [...prev, userMsg];
-        if (prev.length === 0) {
-          const title = textToSend.length > TITLE_MAX_LEN ? textToSend.slice(0, TITLE_MAX_LEN) + '…' : textToSend;
-          agentStateService.updateSessionTitle(sessionId, title);
-          onSessionContentChange?.();
-        }
-        return next;
-      });
-      setInput('');
-    } else if (isConfirmAction) {
-      setMessages((prev) =>
-        prev.map((m) => {
-          if (!m.plan || !m.isAwaitingApproval) return m;
-          const steps = m.plan.steps.map((s, i) =>
-            i === 0 ? { ...s, status: "in_progress" as const } : s
-          );
-          return { ...m, isAwaitingApproval: false, plan: { ...m.plan, steps, isCollapsed: true } };
-        })
-      );
-    } else if (isRefiningPlan) {
-      const userMsg: Message = { id: Date.now().toString(), role: 'user', content: textToSend, timestamp: Date.now() };
-      setMessages((prev) =>
-        prev
-          .map((m) =>
-            m.isAwaitingApproval && m.plan
-              ? { ...m, isAwaitingApproval: false, plan: { ...m.plan, isCollapsed: true } }
-              : m.isAwaitingApproval
-                ? { ...m, isAwaitingApproval: false }
-                : m
-          )
-          .concat(userMsg)
-      );
-      setInput('');
-    }
-
-    setIsLoading(true);
-    const assistantMsgId = 'agent-' + Date.now();
-    const assistantMsg: Message = { id: assistantMsgId, role: 'assistant', content: '', thinkingSteps: [], timestamp: Date.now() };
-    setMessages((prev) => [...prev, assistantMsg]);
-
-    try {
-      await supervisorAgent(
-        sessionId,
-        contextualInput,
-        industry,
-        (step) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, thinkingSteps: [...(m.thinkingSteps || []).filter((s) => s.id !== step.id), step] } : m
-            )
-          );
-        },
-        (text) => {
-          setMessages((prev) => prev.map((m) => (m.id === assistantMsgId ? { ...m, content: text } : m)));
-        },
-        (plan) => {
-          setMessages((prev) => prev.map((m) => (m.id === assistantMsgId ? { ...m, plan, isAwaitingApproval: true } : m)));
-        },
-        (chartData) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, charts: [...(m.charts ?? []), chartData] } : m
-            )
-          );
-        },
-        (paths) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId
-                ? { ...m, writtenFiles: [...(m.writtenFiles ?? []), ...paths] }
-                : m
-            )
-          );
-        },
-        (msgId, stepId, status) => {
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== msgId || !m.plan) return m;
-              const steps = m.plan.steps;
-              const idx = steps.findIndex((s) => s.id === stepId);
-              const newSteps = steps.map((s, i) => {
-                if (s.id === stepId) return { ...s, status };
-                if (status === "completed" && idx >= 0 && i === idx + 1) return { ...s, status: "in_progress" as const };
-                return s;
-              });
-              return { ...m, plan: { ...m.plan, steps: newSteps } };
-            })
-          );
-        },
-        targetPlan,
-        isConfirmAction,
-        planMsgId,
-        { mode }
-      );
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    await sendMessage(customInput || input, {
+      resumePlan,
+      isConfirmAction,
+      planMsgId,
+      onSessionContentChange
+    });
+    if (!customInput && !isConfirmAction) setInput('');
   };
 
   const handleClearSession = async () => {
@@ -234,7 +79,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSess
       cancelText: '取消'
     });
     if (!ok) return;
-    agentStateService.clearSessionContent(sessionId);
+    await agentStateService.clearSessionContent(sessionId);
     loadState(sessionId);
     onSessionContentChange?.();
   };

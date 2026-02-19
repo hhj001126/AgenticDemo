@@ -110,9 +110,9 @@ export function registerBuiltinTools(): void {
           required: ["query"],
         },
       },
-      executor: (args, sessionId) => {
+      executor: async (args, sessionId) => {
         const { query, limit = 5 } = args as { query: string; limit?: number };
-        const chunks = agentStateService.getKnowledgeChunks(sessionId);
+        const chunks = await agentStateService.getKnowledgeChunks(sessionId);
         if (chunks.length === 0) return { matches: [], message: "知识库为空，请先在语义切片引擎中导入分块。" };
         const keywords = query
           .replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, " ")
@@ -423,12 +423,12 @@ export function registerBuiltinTools(): void {
           language: string;
         };
         const chunks = contentChunks || (content ? [content] : []);
-        agentStateService.updateVfs(sessionId, path, "", language, true);
+        await agentStateService.updateVfs(sessionId, path, "", language, true);
         let accumulated = "";
         const totalChunks = chunks.length;
         for (let i = 0; i < chunks.length; i++) {
           accumulated += chunks[i];
-          agentStateService.updateVfs(sessionId, path, accumulated, language, true);
+          await agentStateService.updateVfs(sessionId, path, accumulated, language, true);
           if (onProgress) {
             const progress =
               totalChunks > 1
@@ -437,7 +437,7 @@ export function registerBuiltinTools(): void {
             onProgress(progress);
           }
         }
-        agentStateService.updateVfs(sessionId, path, accumulated, language, false);
+        await agentStateService.updateVfs(sessionId, path, accumulated, language, false);
         return { status: "SUCCESS", path };
       },
     },

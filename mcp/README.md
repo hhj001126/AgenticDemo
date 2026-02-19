@@ -13,6 +13,7 @@
 | [mcp-notes](./mcp-notes/) | 5203 | http://localhost:5203/mcp | 简易笔记（内存存储） |
 | [mcp-echo](./mcp-echo/) | 5204 | http://localhost:5204/mcp | 回显测试，验证连接 |
 | [mcp-time](./mcp-time/) | 5205 | http://localhost:5205/mcp | 时区、日期差、时间戳 |
+| [youdu_mcp](./youdu_mcp/) | 5206 | http://localhost:5206/mcp | 有度即时通：应用消息、部门、用户、群组、会话 |
 
 ### 启动方式
 
@@ -25,6 +26,7 @@ npm run mcp:file-ops  # 端口 5202
 npm run mcp:notes     # 端口 5203
 npm run mcp:echo      # 端口 5204
 npm run mcp:time      # 端口 5205
+npm run mcp:youdu     # 端口 5206（需配置 .env：YOUDU_API_URL、YOUDU_BU_ID、YOUDU_APP_ID、YOUDU_APP_KEY）
 
 # 或手动启动
 cd mcp/mcp-utils && uv sync && uv run python mcp_utils.py

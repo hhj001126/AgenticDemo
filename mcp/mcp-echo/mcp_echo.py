@@ -18,7 +18,7 @@ _cors_middleware = [
     )
 ]
 
-mcp = FastMCP("mcp-echo")
+mcp = FastMCP("mcp-echo", stateless_http=True)
 
 
 @mcp.tool()

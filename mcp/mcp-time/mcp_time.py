@@ -19,7 +19,7 @@ _cors_middleware = [
     )
 ]
 
-mcp = FastMCP("mcp-time")
+mcp = FastMCP("mcp-time", stateless_http=True)
 
 
 @mcp.tool()

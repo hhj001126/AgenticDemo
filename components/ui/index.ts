@@ -10,4 +10,6 @@ export { AppLayout, MainContent, PageContainer, ChatPanelLayout } from './Layout
 export { Surface } from './Surface';
 export { Switch } from './Switch';
 export type { SwitchProps } from './Switch';
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';
 export { ToastProvider } from './Toast';

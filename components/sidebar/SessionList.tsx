@@ -36,9 +36,14 @@ export const SessionList: React.FC<SessionListProps> = ({
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const confirm = useConfirm();
 
-  const refresh = useCallback(() => {
-    setSessions(agentStateService.listSessions());
-    onSessionsChange?.();
+  const refresh = useCallback(async () => {
+    try {
+      const list = await agentStateService.listSessions();
+      setSessions(list);
+      onSessionsChange?.();
+    } catch (e) {
+      console.error("Failed to refresh sessions", e);
+    }
   }, [onSessionsChange]);
 
   useEffect(() => {
@@ -56,20 +61,35 @@ export const SessionList: React.FC<SessionListProps> = ({
         cancelText: '取消'
       });
       if (!ok) return;
-      agentStateService.deleteSession(meta.sessionId);
-      const remaining = agentStateService.listSessions();
+
+      await agentStateService.deleteSession(meta.sessionId);
+
+      // Refresh list locally first to feel responsive
+      const remaining = sessions.filter(s => s.sessionId !== meta.sessionId);
       setSessions(remaining);
-      if (activeSessionId === meta.sessionId && remaining.length > 0) {
-        agentStateService.switchSession(remaining[0].sessionId);
-        onSwitchSession(remaining[0].sessionId);
-      } else if (activeSessionId === meta.sessionId && remaining.length === 0) {
-        const newId = agentStateService.createSession();
-        onSwitchSession(newId);
+
+      // Switch if needed
+      if (activeSessionId === meta.sessionId) {
+        if (remaining.length > 0) {
+          await agentStateService.switchSession(remaining[0].sessionId);
+          onSwitchSession(remaining[0].sessionId);
+        } else {
+          const newId = await agentStateService.createSession();
+          // onSwitchSession triggers parent, which might reload list?
+          onSwitchSession(newId);
+        }
       }
-      onSessionsChange?.();
+      refresh();
     },
-    [confirm, activeSessionId, onSwitchSession, onSessionsChange]
+    [confirm, activeSessionId, onSwitchSession, refresh, sessions]
   );
+
+  const handleCreate = async () => {
+    const newId = await agentStateService.createSession();
+    await agentStateService.switchSession(newId);
+    onSwitchSession(newId);
+    refresh();
+  };
 
   const displayTitle = (title: string) => {
     if (title.length <= MAX_TITLE_LEN) return title;
@@ -80,12 +100,7 @@ export const SessionList: React.FC<SessionListProps> = ({
     <div className="flex flex-col gap-2">
       <button
         type="button"
-        onClick={() => {
-          const newId = agentStateService.createSession();
-          agentStateService.switchSession(newId);
-          onSwitchSession(newId);
-          refresh();
-        }}
+        onClick={handleCreate}
         className={cn(
           'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
           'text-slate-400 hover:bg-sidebar-muted hover:text-white transition-theme'
@@ -100,13 +115,13 @@ export const SessionList: React.FC<SessionListProps> = ({
             key={meta.sessionId}
             role="button"
             tabIndex={0}
-            onClick={() => {
-              agentStateService.switchSession(meta.sessionId);
+            onClick={async () => {
+              await agentStateService.switchSession(meta.sessionId);
               onSwitchSession(meta.sessionId);
             }}
-            onKeyDown={(e) => {
+            onKeyDown={async (e) => {
               if (e.key === 'Enter') {
-                agentStateService.switchSession(meta.sessionId);
+                await agentStateService.switchSession(meta.sessionId);
                 onSwitchSession(meta.sessionId);
               }
             }}

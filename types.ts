@@ -1,4 +1,4 @@
-import type { FunctionDeclaration } from "@google/genai";
+import type { FunctionDeclaration, Content } from "@google/genai";
 
 /** 通用 AI 角色配置：由外部或用户指定 */
 export interface AgentRoleConfig {
@@ -8,6 +8,8 @@ export interface AgentRoleConfig {
   name: string;
   /** 角色描述（能力、职责） */
   description?: string;
+  /** 角色语气风格 */
+  tone?: string;
   /** 自定义系统指令追加（可选） */
   customInstructions?: string;
 }
@@ -138,3 +140,40 @@ export interface Message {
   feedback?: 'like' | 'dislike';
   isAwaitingApproval?: boolean;
 }
+
+export interface SessionMeta {
+  sessionId: string;
+  title?: string;
+  lastUpdated: number;
+}
+
+export interface KnowledgeChunk {
+  id: string;
+  content: string;
+  summary?: string;
+  source?: string;
+  timestamp: number;
+  tags?: string[];
+  meta?: Record<string, any>;
+}
+
+export interface StoredMcpServer {
+  id: string;
+  url: string;
+  name?: string;
+  enabled?: boolean;
+  status?: 'connected' | 'connecting' | 'failed' | 'disconnected';
+  error?: string;
+}
+
+export interface AgentSessionState {
+
+  sessionId: string;
+  title: string;
+  geminiHistory: Content[];
+  uiMessages: Message[];
+  vfs: Record<string, VfsFile>;
+  knowledgeChunks: KnowledgeChunk[];
+  lastUpdated: number;
+}
+

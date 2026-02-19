@@ -1,102 +1,135 @@
-import React, { useState, useCallback } from 'react';
-import { Layers, Database, Search, RefreshCw } from 'lucide-react';
-import { PageContainer, Button } from './ui';
-import { StatCard } from './vector/StatCard';
-import { vectorStoreService } from '../services/vectorStoreService';
-import type { KnowledgeChunk } from '../services/agentStateService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Database, Plus, Search, Trash2, FileText, Loader2 } from 'lucide-react';
+import { KnowledgeChunk, vectorStoreService } from '../services/vectorStoreService';
+import { useConfirm } from './ui';
+import { toast } from '../utils/toast';
 
 const VectorDatabase: React.FC = () => {
+  const [chunks, setChunks] = useState<KnowledgeChunk[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<KnowledgeChunk[]>([]);
-  const [chunks, setChunks] = useState<KnowledgeChunk[]>(() => vectorStoreService.getChunks());
+  const [isSearching, setIsSearching] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const confirm = useConfirm();
 
-  const refresh = useCallback(() => {
-    setChunks(vectorStoreService.getChunks());
-    setSearchResults([]);
+  const loadChunks = useCallback(async () => {
+    try {
+      const data = await vectorStoreService.getChunks();
+      setChunks(data);
+    } catch (e) {
+      console.error("Failed to load chunks", e);
+    }
   }, []);
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-    const results = vectorStoreService.search(searchQuery.trim(), 10);
-    setSearchResults(results);
+  useEffect(() => {
+    loadChunks();
+  }, [loadChunks]);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const results = await vectorStoreService.search(searchQuery);
+      setSearchResults(results);
+    } catch (e) {
+      toast.error("Search failed");
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const displayChunks = searchResults.length > 0 ? searchResults : chunks;
-  const stats = [
-    { label: '向量总数', value: chunks.length.toLocaleString(), colorClass: 'text-primary' },
-    { label: '维度 (Dimensions)', value: '—', colorClass: 'text-emerald-400' },
-    { label: '索引类型', value: '全文', colorClass: 'text-amber-400' },
-    { label: '检索模式', value: '关键词匹配', colorClass: 'text-rose-400' },
-  ];
+  const handleClear = async () => {
+    if (await confirm({ title: '清空知识库', message: '确定要清空所有向量数据吗？', danger: true })) {
+      await vectorStoreService.clear();
+      loadChunks();
+      setSearchResults([]);
+    }
+  };
+
+  const handleImportDemo = async () => {
+    // Mock import for demo
+    const demoChunks: KnowledgeChunk[] = [
+      { content: "Demo Content 1", summary: "Summary 1", boundaryReason: "Start" },
+      { content: "Demo Content 2", summary: "Summary 2", boundaryReason: "End" }
+    ];
+    setIsImporting(true);
+    await vectorStoreService.addChunks(demoChunks);
+    await loadChunks();
+    setIsImporting(false);
+    toast.success("Demo chunks imported");
+  };
 
   return (
-    <div className="h-full flex flex-col space-y-6">
-      <div className="grid grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <StatCard key={s.label} label={s.label} value={s.value} colorClass={s.colorClass} />
-        ))}
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="flex items-center gap-2">
+          <Database className="w-4 h-4 text-indigo-500" />
+          <h2 className="font-medium text-sm">向量知识库</h2>
+          <span className="text-xs text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+            {chunks.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleImportDemo}
+            disabled={isImporting}
+            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-500 hover:text-indigo-500"
+            title="导入测试数据"
+          >
+            {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={handleClear}
+            className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-md transition-colors text-slate-500 hover:text-rose-500"
+            title="清空知识库"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      <PageContainer padding="md" className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <Database size={20} className="text-primary" />
-            <h2 className="text-lg font-bold text-text-secondary">向量化预览 (Similarity Visualization)</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input
-                placeholder="测试语义检索..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-9 pr-4 py-1.5 bg-surface-muted border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary transition-theme w-64"
-              />
-            </div>
-            <Button variant="primary" size="md" onClick={handleSearch}>
-              <Search size={14} />
-              检索
-            </Button>
-            <Button variant="muted" size="md" onClick={refresh} className="p-2">
-              <RefreshCw size={16} />
-            </Button>
-          </div>
+      <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="语义检索..."
+            className="w-full pl-8 pr-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-800 border-none rounded-md focus:ring-1 focus:ring-indigo-500"
+          />
+          <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400" />
         </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto border border-border-muted rounded-xl bg-surface-muted/50 p-4">
-          {chunks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-text-muted opacity-50 space-y-2">
-              <Layers size={48} />
-              <p className="text-sm font-medium">向量库为空</p>
-              <p className="text-xs">在「语义切片引擎」中处理文本后点击「导入向量库」即可</p>
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {(searchResults.length > 0 ? searchResults : chunks).map((chunk, i) => (
+          <div key={i} className="p-3 rounded-lg border border-slate-100 dark:border-slate-700 hover:border-indigo-100 dark:hover:border-indigo-900 bg-slate-50/30 dark:bg-slate-800/30 transition-colors">
+            <div className="flex items-start gap-2 mb-1">
+              <FileText className="w-3 h-3 text-indigo-400 mt-1" />
+              <div className="text-xs font-medium text-slate-700 dark:text-slate-300 line-clamp-1">
+                {chunk.summary}
+              </div>
             </div>
-          ) : searchResults.length === 0 && searchQuery.trim() ? (
-            <div className="flex flex-col items-center justify-center h-48 text-text-muted space-y-2">
-              <Search size={32} />
-              <p className="text-sm">未找到匹配结果</p>
-              <p className="text-xs">尝试调整检索关键词</p>
+            <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 pl-5 border-l-2 border-slate-200 dark:border-slate-700 ml-1.5">
+              {chunk.content}
             </div>
-          ) : (
-            <div className="space-y-4">
-              {searchQuery.trim() && (
-                <p className="text-xs text-text-muted">
-                  检索「{searchQuery}」共 {searchResults.length} 条结果
-                </p>
-              )}
-              {displayChunks.map((c, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 bg-surface border border-border rounded-xl hover:border-primary transition-theme"
-                >
-                  <p className="text-xs font-bold text-primary mb-1">{c.summary}</p>
-                  <p className="text-sm text-text-secondary line-clamp-3">{c.content}</p>
-                </div>
-              ))}
+            <div className="mt-2 pl-5 flex items-center gap-2">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-500">
+                {chunk.boundaryReason}
+              </span>
             </div>
-          )}
-        </div>
-      </PageContainer>
+          </div>
+        ))}
+        {chunks.length === 0 && (
+          <div className="text-center py-8 text-slate-400 text-xs">
+            暂无知识分块
+          </div>
+        )}
+      </div>
     </div>
   );
 };

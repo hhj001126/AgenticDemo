@@ -19,7 +19,7 @@ _cors_middleware = [
     )
 ]
 
-mcp = FastMCP("mcp-file-ops")
+mcp = FastMCP("mcp-file-ops", stateless_http=True)
 
 # 操作根目录：未设置 MCP_FILE_OPS_ROOT 时使用「当前工作目录/file_ops」；设置则使用指定目录（如 E:\tmp）
 _env_root = os.environ.get("MCP_FILE_OPS_ROOT", "").strip()

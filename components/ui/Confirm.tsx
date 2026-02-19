@@ -105,7 +105,7 @@ export function ConfirmProvider({ children }: ConfirmProviderProps) {
       {open && (
         <div
           className={cn(
-            "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm",
+            "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-[1px]",
             closing ? "animate-overlay-out" : "animate-overlay-in"
           )}
           role="dialog"
@@ -125,52 +125,52 @@ export function ConfirmProvider({ children }: ConfirmProviderProps) {
                 closing ? "animate-modal-out" : "animate-modal-in"
               )}
             >
-            <Flex direction="col" gap={3}>
-              <div className="flex items-start gap-3">
-                {options.danger && (
-                  <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
-                    <AlertTriangle size={18} className="text-rose-600" />
+              <Flex direction="col" gap={3}>
+                <div className="flex items-start gap-3">
+                  {options.danger && (
+                    <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
+                      <AlertTriangle size={18} className="text-rose-600" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h2 id="confirm-title" className="text-base font-bold text-text">
+                      {options.title}
+                    </h2>
+                    <p className="text-sm text-text-muted mt-0.5 whitespace-pre-wrap leading-relaxed">
+                      {options.message}
+                    </p>
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <h2 id="confirm-title" className="text-base font-bold text-text">
-                    {options.title}
-                  </h2>
-                  <p className="text-sm text-text-muted mt-0.5 whitespace-pre-wrap leading-relaxed">
-                    {options.message}
-                  </p>
                 </div>
-              </div>
-              <Flex justify="end" gap={2} className="pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => handleClose(false)}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
-                    "border border-border-muted bg-surface text-text-secondary",
-                    "hover:border-primary-200 hover:bg-primary-50/50 hover:text-primary-700",
-                    "active:scale-[0.98]"
-                  )}
-                >
-                  {options.cancelText}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleClose(true)}
-                  disabled={confirming}
-                  className={cn(
-                    "px-5 py-2 rounded-xl text-sm font-medium transition-all duration-200",
-                    "shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none",
-                    options.danger
-                      ? "bg-rose-600 text-white hover:bg-rose-700 hover:shadow-md"
-                      : "bg-primary-700 text-white hover:bg-primary hover:shadow-md"
-                  )}
-                >
-                  {options.confirmText}
-                </button>
+                <Flex justify="end" gap={2} className="pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleClose(false)}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+                      "border border-border-muted bg-surface text-text-secondary",
+                      "hover:border-primary-200 hover:bg-primary-50/50 hover:text-primary-700",
+                      "active:scale-[0.98]"
+                    )}
+                  >
+                    {options.cancelText}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleClose(true)}
+                    disabled={confirming}
+                    className={cn(
+                      "px-5 py-2 rounded-xl text-sm font-medium transition-all duration-200",
+                      "shadow-sm active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none",
+                      options.danger
+                        ? "bg-rose-600 text-white hover:bg-rose-700 hover:shadow-md"
+                        : "bg-primary-700 text-white hover:bg-primary hover:shadow-md"
+                    )}
+                  >
+                    {options.confirmText}
+                  </button>
+                </Flex>
               </Flex>
-            </Flex>
-          </Card>
+            </Card>
           </div>
         </div>
       )}
