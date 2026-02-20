@@ -140,31 +140,22 @@ export function unregisterAllMcpTools(): void {
 
 const OLD_STORAGE_KEY = "agent_mcp_server_url";
 
-/** 获取已存储的 MCP 服务器列表（兼容旧单 URL 迁移） */
-export function getStoredMcpServers(): StoredMcpServer[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    }
-    // 迁移旧单 URL
-    const oldUrl = localStorage.getItem(OLD_STORAGE_KEY);
-    if (oldUrl) {
-      const servers: StoredMcpServer[] = [
-        { id: genId(), url: oldUrl, addedAt: Date.now() },
-      ];
-      saveMcpServers(servers);
-      localStorage.removeItem(OLD_STORAGE_KEY);
-      return servers;
-    }
-    return [];
-  } catch {
-    return [];
-  }
+/** 服务端返回的 MCP 服务器列表（由 ToolsManagerPage 从 api 拉取后注入，供 McpConnectionManager 使用） */
+let serverListOverride: StoredMcpServer[] | null = null;
+export function setMcpServersOverride(servers: StoredMcpServer[] | null): void {
+  serverListOverride = servers;
+}
+export function getMcpServersOverride(): StoredMcpServer[] | null {
+  return serverListOverride;
 }
 
-/** 保存 MCP 服务器列表 */
+/** 获取 MCP 服务器列表，统一来自后端 API（由 ToolsManagerPage 拉取后通过 setMcpServersOverride 注入） */
+export function getStoredMcpServers(): StoredMcpServer[] {
+  if (serverListOverride !== null) return serverListOverride;
+  return [];
+}
+
+/** 保存 MCP 服务器列表（已废弃，统一用后端 API） */
 function saveMcpServers(servers: StoredMcpServer[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(servers));
 }

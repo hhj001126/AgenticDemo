@@ -11,7 +11,9 @@
     "mcp:file-ops": "cd mcp/mcp-file-ops && uv sync && uv run python mcp_file_ops.py",
     "mcp:notes": "cd mcp/mcp-notes && uv sync && uv run python mcp_notes.py",
     "mcp:echo": "cd mcp/mcp-echo && uv sync && uv run python mcp_echo.py",
-    "mcp:time": "cd mcp/mcp-time && uv sync && uv run python mcp_time.py"
+    "mcp:time": "cd mcp/mcp-time && uv sync && uv run python mcp_time.py",
+    "server": "cd server && go run ./cmd/server",
+    "server:build": "cd server && go build -o ../bin/agentic-server ./cmd/server"
   },
   "dependencies": {
     "@google/genai": "^1.40.0",

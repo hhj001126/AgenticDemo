@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Code, PieChart, ShieldCheck, Loader2, FileText, Search, ListChecks, BarChart3, Scale, Briefcase, MessageSquare, Sparkles } from 'lucide-react';
-import { Industry, AgentMode, Message, Plan, VfsFile } from '../types';
-import { supervisorAgent } from '../services/geminiService';
-import { agentStateService } from '../services/agentStateService';
+import { Industry, AgentMode, Message, Plan, ThinkingStep, ChartData, VfsFile } from '../types';
+import { api } from '../services/api';
 import CodeWorkspace from './CodeWorkspace';
 import { ChatPanelLayout, useConfirm } from './ui';
 import {
@@ -50,19 +49,24 @@ const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSess
   const scrollRef = useRef<HTMLDivElement>(null);
   const confirm = useConfirm();
 
-  const loadState = useCallback((id: string) => {
-    const saved = agentStateService.getSession(id);
-    if (saved) {
-      if (saved.uiMessages) setMessages(saved.uiMessages);
-      if (saved.vfs) setVfs(saved.vfs);
-    } else {
+  const loadState = useCallback(async (id: string) => {
+    try {
+      const saved = (await api.getSession(id)) as { uiMessages?: Message[]; vfs?: Record<string, VfsFile> } | null;
+      if (saved) {
+        setMessages(saved.uiMessages ?? []);
+        setVfs(saved.vfs ?? {});
+      } else {
+        setMessages([]);
+        setVfs({});
+      }
+    } catch {
       setMessages([]);
       setVfs({});
     }
   }, []);
 
   useEffect(() => {
-    loadState(sessionId);
+    void loadState(sessionId);
   }, [sessionId, loadState]);
 
   useEffect(() => {
@@ -75,11 +79,6 @@ const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSess
     return () => window.removeEventListener('vfs-updated', handleVfsUpdate);
   }, []);
 
-  useEffect(() => {
-    if (sessionId && messages.length > 0) {
-      agentStateService.syncUiState(sessionId, messages);
-    }
-  }, [messages, sessionId]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -127,7 +126,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSess
         const next = [...prev, userMsg];
         if (prev.length === 0) {
           const title = textToSend.length > TITLE_MAX_LEN ? textToSend.slice(0, TITLE_MAX_LEN) + '…' : textToSend;
-          agentStateService.updateSessionTitle(sessionId, title);
+          api.updateSessionTitle(sessionId, title).catch(() => {});
           onSessionContentChange?.();
         }
         return next;
@@ -164,59 +163,58 @@ const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSess
     const assistantMsg: Message = { id: assistantMsgId, role: 'assistant', content: '', thinkingSteps: [], timestamp: Date.now() };
     setMessages((prev) => [...prev, assistantMsg]);
 
+    const setStep = (step: ThinkingStep | Record<string, unknown>) =>
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? { ...m, thinkingSteps: [...(m.thinkingSteps || []).filter((s) => s.id !== (step as ThinkingStep).id), step as ThinkingStep] }
+            : m
+        )
+      );
+    const setText = (text: string) =>
+      setMessages((prev) => prev.map((m) => (m.id === assistantMsgId ? { ...m, content: text } : m)));
+    const setPlan = (plan: Plan) =>
+      setMessages((prev) => prev.map((m) => (m.id === assistantMsgId ? { ...m, plan, isAwaitingApproval: true } : m)));
+    const setCharts = (chartData: ChartData | Record<string, unknown>) =>
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId ? { ...m, charts: [...(m.charts ?? []), chartData as ChartData] } : m
+        )
+      );
+    const setPaths = (paths: string[]) =>
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId ? { ...m, writtenFiles: [...(m.writtenFiles ?? []), ...paths] } : m
+        )
+      );
+    const setPlanStep = (msgId: string, stepId: string, status: 'in_progress' | 'completed') =>
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== msgId || !m.plan) return m;
+          const steps = m.plan.steps;
+          const idx = steps.findIndex((s) => s.id === stepId);
+          const newSteps = steps.map((s, i) => {
+            if (s.id === stepId) return { ...s, status: status as 'pending' | 'in_progress' | 'completed' };
+            if (status === "completed" && idx >= 0 && i === idx + 1) return { ...s, status: "in_progress" as const };
+            return s;
+          });
+          return { ...m, plan: { ...m.plan, steps: newSteps } };
+        })
+      );
+
     try {
-      await supervisorAgent(
+      await api.chatStream(
         sessionId,
         contextualInput,
-        industry,
-        (step) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, thinkingSteps: [...(m.thinkingSteps || []).filter((s) => s.id !== step.id), step] } : m
-            )
-          );
-        },
-        (text) => {
-          setMessages((prev) => prev.map((m) => (m.id === assistantMsgId ? { ...m, content: text } : m)));
-        },
-        (plan) => {
-          setMessages((prev) => prev.map((m) => (m.id === assistantMsgId ? { ...m, plan, isAwaitingApproval: true } : m)));
-        },
-        (chartData) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, charts: [...(m.charts ?? []), chartData] } : m
-            )
-          );
-        },
-        (paths) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMsgId
-                ? { ...m, writtenFiles: [...(m.writtenFiles ?? []), ...paths] }
-                : m
-            )
-          );
-        },
-        (msgId, stepId, status) => {
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== msgId || !m.plan) return m;
-              const steps = m.plan.steps;
-              const idx = steps.findIndex((s) => s.id === stepId);
-              const newSteps = steps.map((s, i) => {
-                if (s.id === stepId) return { ...s, status };
-                if (status === "completed" && idx >= 0 && i === idx + 1) return { ...s, status: "in_progress" as const };
-                return s;
-              });
-              return { ...m, plan: { ...m.plan, steps: newSteps } };
-            })
-          );
-        },
-        targetPlan,
-        isConfirmAction,
-        planMsgId,
-        { mode }
+        { resumePlan: targetPlan, isApprovalConfirmed: isConfirmAction, planMsgId, options: { mode, industry } },
+        {
+          onText: setText,
+          onThinking: (s) => setStep(s as unknown as ThinkingStep),
+          onPlanProposed: (p) => setPlan(p as unknown as Plan),
+          onChartData: (d) => setCharts(d as unknown as ChartData),
+          onFilesWritten: setPaths,
+          onPlanStepUpdate: (d) => d.msgId && d.stepId && d.status && setPlanStep(d.msgId, d.stepId, d.status as 'in_progress' | 'completed'),
+        }
       );
     } catch (err) {
       console.error(err);
@@ -234,8 +232,8 @@ const AgentChat: React.FC<AgentChatProps> = ({ sessionId, industry, mode, onSess
       cancelText: '取消'
     });
     if (!ok) return;
-    agentStateService.clearSessionContent(sessionId);
-    loadState(sessionId);
+    await api.clearSessionContent(sessionId).catch(() => {});
+    await loadState(sessionId);
     onSessionContentChange?.();
   };
 

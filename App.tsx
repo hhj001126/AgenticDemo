@@ -6,7 +6,7 @@ import TodoListPage from './components/tools/TodoListPage';
 import McpConnectionManager from './components/tools/McpConnectionManager';
 import SemanticChunker from './components/SemanticChunker';
 import VectorDatabase from './components/VectorDatabase';
-import { agentStateService } from './services/agentStateService';
+import { api } from './services/api';
 import { AppLayout, MainContent, PageContainer, ConfirmProvider, ToastProvider } from './components/ui';
 import { Industry, AgentMode } from './types';
 
@@ -28,12 +28,30 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved).mode : AgentMode.AGENTIC;
   });
 
-  const [activeSessionId, setActiveSessionId] = useState<string>(() => {
-    const id = agentStateService.initializeSession();
-    return id;
-  });
+  const [activeSessionId, setActiveSessionId] = useState<string>('');
 
   const [sessionListVersion, setSessionListVersion] = useState(0);
+
+  useEffect(() => {
+    if (activeSessionId !== '') return;
+    api.getActiveSession()
+      .then((r) => {
+        if (r.sessionId) {
+          setActiveSessionId(r.sessionId);
+        } else {
+          return api.createSession().then((s) => {
+            setActiveSessionId(s.sessionId);
+            setSessionListVersion((v) => v + 1);
+          });
+        }
+      })
+      .catch(() =>
+        api.createSession().then((r) => {
+          setActiveSessionId(r.sessionId);
+          setSessionListVersion((v) => v + 1);
+        })
+      );
+  }, [activeSessionId]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_APP_STATE, JSON.stringify({ activeTab, industry, mode }));
@@ -56,7 +74,7 @@ const App: React.FC = () => {
       case 'tools':
         return <ToolsManagerPage />;
       case 'knowledge':
-        return <SemanticChunker />;
+        return <SemanticChunker activeSessionId={activeSessionId} />;
       case 'vector':
         return <VectorDatabase />;
       case 'mcp':

@@ -13,7 +13,7 @@ interface AppLayoutProps {
 export const AppLayout = memo<AppLayoutProps>(({ sidebar, children, className }) => (
   <div className={cn('flex h-screen w-full font-body app-bg', className)}>
     {sidebar}
-    <main className="flex-1 p-6 h-full flex flex-col overflow-hidden">
+    <main className="flex-1 p-4 h-full flex flex-col overflow-hidden">
       {children}
     </main>
   </div>

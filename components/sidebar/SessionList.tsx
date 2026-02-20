@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { MessageSquarePlus, MessageSquare, Trash2 } from 'lucide-react';
-import { agentStateService, SessionMeta } from '../../services/agentStateService';
+import { api } from '../../services/api';
+
+type SessionMeta = { sessionId: string; title: string; lastUpdated: number };
 import { useConfirm } from '../ui';
 import { cn } from '../../utils/classnames';
 
@@ -36,8 +38,13 @@ export const SessionList: React.FC<SessionListProps> = ({
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const confirm = useConfirm();
 
-  const refresh = useCallback(() => {
-    setSessions(agentStateService.listSessions());
+  const refresh = useCallback(async () => {
+    try {
+      const list = await api.listSessions();
+      setSessions(list);
+    } catch {
+      setSessions([]);
+    }
     onSessionsChange?.();
   }, [onSessionsChange]);
 
@@ -56,15 +63,15 @@ export const SessionList: React.FC<SessionListProps> = ({
         cancelText: '取消'
       });
       if (!ok) return;
-      agentStateService.deleteSession(meta.sessionId);
-      const remaining = agentStateService.listSessions();
+      await api.deleteSession(meta.sessionId);
+      const remaining = await api.listSessions();
       setSessions(remaining);
       if (activeSessionId === meta.sessionId && remaining.length > 0) {
-        agentStateService.switchSession(remaining[0].sessionId);
+        await api.switchSession(remaining[0].sessionId);
         onSwitchSession(remaining[0].sessionId);
       } else if (activeSessionId === meta.sessionId && remaining.length === 0) {
-        const newId = agentStateService.createSession();
-        onSwitchSession(newId);
+        const { sessionId } = await api.createSession();
+        onSwitchSession(sessionId);
       }
       onSessionsChange?.();
     },
@@ -80,10 +87,10 @@ export const SessionList: React.FC<SessionListProps> = ({
     <div className="flex flex-col gap-2">
       <button
         type="button"
-        onClick={() => {
-          const newId = agentStateService.createSession();
-          agentStateService.switchSession(newId);
-          onSwitchSession(newId);
+        onClick={async () => {
+          const { sessionId } = await api.createSession();
+          await api.switchSession(sessionId);
+          onSwitchSession(sessionId);
           refresh();
         }}
         className={cn(
@@ -101,13 +108,11 @@ export const SessionList: React.FC<SessionListProps> = ({
             role="button"
             tabIndex={0}
             onClick={() => {
-              agentStateService.switchSession(meta.sessionId);
-              onSwitchSession(meta.sessionId);
+              api.switchSession(meta.sessionId).then(() => onSwitchSession(meta.sessionId));
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                agentStateService.switchSession(meta.sessionId);
-                onSwitchSession(meta.sessionId);
+                api.switchSession(meta.sessionId).then(() => onSwitchSession(meta.sessionId));
               }
             }}
             className={cn(

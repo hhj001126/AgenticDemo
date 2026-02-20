@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { FileText, Tags, Download, Layers } from 'lucide-react';
 import { semanticChunker } from '../services/geminiService';
-import { agentStateService } from '../services/agentStateService';
 import { vectorStoreService } from '../services/vectorStoreService';
+import { api } from '../services/api';
 import { toast } from '../utils/toast';
 import { PageContainer, Button } from './ui';
 import { ChunkInputPanel } from './chunker/ChunkInputPanel';
 import { ChunkCard, SemanticChunk } from './chunker/ChunkCard';
 
-const SemanticChunker: React.FC = () => {
+interface SemanticChunkerProps {
+  activeSessionId?: string;
+}
+
+const SemanticChunker: React.FC<SemanticChunkerProps> = ({ activeSessionId = '' }) => {
   const [inputText, setInputText] = useState('');
   const [chunks, setChunks] = useState<SemanticChunk[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,11 +32,18 @@ const SemanticChunker: React.FC = () => {
     }
   };
 
-  const handleImportToSession = () => {
-    const sessionId = agentStateService.getActiveSessionId() ?? agentStateService.initializeSession();
-    agentStateService.appendKnowledgeChunks(sessionId, chunks);
-    setImported(true);
-    toast(`已导入 ${chunks.length} 个分块到当前会话`);
+  const handleImportToSession = async () => {
+    if (!activeSessionId) {
+      toast('请先创建或选择会话');
+      return;
+    }
+    try {
+      await api.appendKnowledgeChunks(activeSessionId, chunks);
+      setImported(true);
+      toast(`已导入 ${chunks.length} 个分块到当前会话`);
+    } catch (e) {
+      toast('导入失败：' + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleImportToVector = () => {

@@ -1,14 +1,11 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Wrench, Package, Network, Link2, Unlink, Plus, Trash2, AlertCircle, Server, Zap, Loader2, ChevronDown, ChevronRight, Pencil } from "lucide-react";
-import { toolRegistryService } from "../../services/geminiService";
-import { toolEnableService } from "../../services/toolEnableService";
+import { toolRegistryService } from "../../services/registry";
+import { api } from "../../services/api";
 import {
-  getStoredMcpServers,
   getConnectedMcpIds,
   saveConnectedMcpIds,
-  addMcpServer,
-  removeMcpServer,
-  updateMcpServer,
+  setMcpServersOverride,
   getMcpServerState,
   getMcpServerError,
   subscribeToMcpStateChange,
@@ -144,7 +141,14 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
   const [tools, setTools] = useState<
     Array<{ id: string; tool: any; source: RegistrySource }>
   >([]);
-  const [mcpServers, setMcpServers] = useState<StoredMcpServer[]>(() => getStoredMcpServers());
+  const [builtinToolsFromApi, setBuiltinToolsFromApi] = useState<
+    Array<{ id: string; name: string; description: string; blocking: boolean; enabled: boolean }>
+  >([]);
+  const [mcpServers, setMcpServers] = useState<StoredMcpServer[]>([]);
+  const [mcpServerStatus, setMcpServerStatus] = useState<
+    Record<string, { status: string; lastError?: string; toolsCount?: number }>
+  >({});
+  const [checkingId, setCheckingId] = useState<string | null>(null);
   const [connectedIds, setConnectedIds] = useState<Set<string>>(() => new Set(getConnectedMcpIds()));
   const [serverStates, setServerStates] = useState<Record<string, "connecting" | "ready" | "failed">>({});
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
@@ -159,16 +163,56 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
   const [editError, setEditError] = useState<string | null>(null);
   const [subTab, setSubTab] = useState<ToolsSubTab>(initialTab);
   const [expandedBuiltin, setExpandedBuiltin] = useState(initialTab !== "mcp");
-  const [expandedMcpIds, setExpandedMcpIds] = useState<Set<string>>(() =>
-    initialTab === "mcp" ? new Set(getStoredMcpServers().map((s) => s.id)) : new Set()
-  );
+  const [expandedMcpIds, setExpandedMcpIds] = useState<Set<string>>(new Set());
+  const [toolEnableState, setToolEnableState] = useState<Record<string, boolean>>({});
 
-  const refreshTools = useCallback(() => {
-    setTools(toolRegistryService.getAllWithSource());
+  const refreshTools = useCallback(async () => {
+    let builtin: Array<{ id: string; name: string; description: string; blocking: boolean; enabled: boolean }> = [];
+    try {
+      const [toolsRes, enableRes] = await Promise.all([api.listTools(), api.getToolEnableState()]);
+      builtin = toolsRes.tools ?? [];
+      setBuiltinToolsFromApi(builtin);
+      setToolEnableState(enableRes.enabled ?? {});
+    } catch {
+      setBuiltinToolsFromApi([]);
+    }
+    const mcpFromRegistry = toolRegistryService.getAllWithSource().filter((t) => t.source === "mcp");
+    const merged = [
+      ...builtin.map((t) => ({
+        id: t.id,
+        tool: { definition: { name: t.name, description: t.description }, blocking: t.blocking, enabled: t.enabled },
+        source: "builtin" as RegistrySource,
+      })),
+      ...mcpFromRegistry,
+    ];
+    setTools(merged);
   }, []);
 
-  const refreshServers = useCallback(() => {
-    setMcpServers(getStoredMcpServers());
+  const refreshServers = useCallback(async () => {
+    try {
+      const list = await api.listMcpServers();
+      const servers: StoredMcpServer[] = list.map((s) => ({
+        id: s.id,
+        url: s.url,
+        name: s.name,
+        addedAt: 0,
+      }));
+      setMcpServersOverride(servers);
+      setMcpServers(servers);
+      const statusMap: Record<string, { status: string; lastError?: string; toolsCount?: number }> = {};
+      for (const s of list) {
+        if ((s as any).status)
+          statusMap[s.id] = {
+            status: (s as any).status,
+            lastError: (s as any).lastError,
+            toolsCount: (s as any).toolsCount,
+          };
+      }
+      setMcpServerStatus(statusMap);
+    } catch {
+      setMcpServersOverride(null);
+      setMcpServers([]);
+    }
   }, []);
 
   const confirm = useConfirm();
@@ -176,6 +220,10 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
   useEffect(() => {
     refreshTools();
   }, [refreshTools, connectedIds]);
+
+  useEffect(() => {
+    refreshServers();
+  }, [refreshServers]);
 
   useEffect(() => {
     const syncState = () => {
@@ -203,11 +251,11 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
     return unsub;
   }, [mcpServers, refreshTools]);
 
-  const handleAddAndConnect = (url: string, name?: string) => {
+  const handleAddAndConnect = async (url: string, name?: string) => {
     setAddError(null);
     try {
-      const server = addMcpServer({ url, name });
-      refreshServers();
+      const server = await api.addMcpServer(url, name);
+      await refreshServers();
       const next = new Set(connectedIds).add(server.id);
       setConnectedIds(next);
       saveConnectedMcpIds([...next]);
@@ -220,11 +268,11 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
     }
   };
 
-  const handleAddOnly = (url: string, name?: string) => {
+  const handleAddOnly = async (url: string, name?: string) => {
     setAddError(null);
     try {
-      addMcpServer({ url, name });
-      refreshServers();
+      await api.addMcpServer(url, name);
+      await refreshServers();
       setShowAddModal(false);
       setAddUrl("");
       setAddName("");
@@ -264,6 +312,25 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
     refreshTools();
   };
 
+  const handleCheck = async (serverId: string) => {
+    setCheckingId(serverId);
+    try {
+      const res = await api.checkMcpServer(serverId);
+      setMcpServerStatus((prev) => ({
+        ...prev,
+        [serverId]: { status: res.status, lastError: res.error, toolsCount: res.toolsCount },
+      }));
+      await refreshServers();
+    } catch (e: any) {
+      setMcpServerStatus((prev) => ({
+        ...prev,
+        [serverId]: { status: "failed", lastError: e.message ?? "检查失败" },
+      }));
+    } finally {
+      setCheckingId(null);
+    }
+  };
+
   const handleRetry = (serverId: string) => {
     handleDisconnect(serverId);
     setTimeout(() => handleConnect(serverId), 100);
@@ -281,8 +348,8 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
     });
     if (!ok) return;
     if (connectedIds.has(serverId)) handleDisconnect(serverId);
-    removeMcpServer(serverId);
-    refreshServers();
+    await api.deleteMcpServer(serverId);
+    await refreshServers();
     setExpandedMcpIds((prev) => {
       const next = new Set(prev);
       next.delete(serverId);
@@ -298,12 +365,12 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingId) return;
     setEditError(null);
     try {
-      updateMcpServer(editingId, { name: editName.trim() || undefined, url: editUrl.trim() });
-      refreshServers();
+      await api.updateMcpServer(editingId, { name: editName.trim() || undefined, url: editUrl.trim() });
+      await refreshServers();
       setShowEditModal(false);
       setEditingId(null);
       setEditName("");
@@ -429,21 +496,26 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
             {expandedBuiltin && (
               <div className="p-4 pt-2 bg-surface/50">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {builtinToolsList.map(({ id, tool, source }) => (
-                    <ToolCard
-                      key={id}
-                      id={id}
-                      name={getToolDisplayName(id, tool.definition?.name || id)}
-                      description={tool.definition?.description || ""}
-                      source={source}
-                      blocking={tool.blocking}
-                      enabled={toolEnableService.getToolEnabled(id)}
-                      onToggle={() => {
-                        toolEnableService.setToolEnabled(id, !toolEnableService.getToolEnabled(id));
-                        refreshTools();
-                      }}
-                    />
-                  ))}
+                  {builtinToolsList.map(({ id, tool, source }) => {
+                    const enabled = (tool as any)?.enabled ?? toolEnableState[id] ?? true;
+                    return (
+                      <ToolCard
+                        key={id}
+                        id={id}
+                        name={getToolDisplayName(id, tool.definition?.name || id)}
+                        description={tool.definition?.description || ""}
+                        source={source}
+                        blocking={tool.blocking}
+                        enabled={enabled}
+                        onToggle={async () => {
+                          const next = !enabled;
+                          await api.setToolEnabled(id, next);
+                          setToolEnableState((s) => ({ ...s, [id]: next }));
+                          refreshTools();
+                        }}
+                      />
+                    );
+                  })}
                 </div>
                 {builtinToolsList.length === 0 && (
                   <p className="text-sm text-text-muted py-4 text-center">暂无内置工具</p>
@@ -502,6 +574,38 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
                     </div>
                   </button>
                   <Flex align="center" gap={2} className="shrink-0 flex-wrap">
+                    <Button
+                        variant="muted"
+                        size="sm"
+                        onClick={() => handleCheck(s.id)}
+                        disabled={checkingId === s.id}
+                        className="gap-1"
+                      >
+                        {checkingId === s.id ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin" />
+                            检查中
+                          </>
+                        ) : (
+                          "检查"
+                        )}
+                      </Button>
+                    {mcpServerStatus[s.id]?.status && (
+                      <Badge
+                        variant={
+                          mcpServerStatus[s.id].status === "ready"
+                            ? "success"
+                            : mcpServerStatus[s.id].status === "failed"
+                              ? "warning"
+                              : "muted"
+                        }
+                        size="sm"
+                      >
+                        {mcpServerStatus[s.id].status === "ready"
+                          ? `${mcpServerStatus[s.id].toolsCount ?? 0} 工具`
+                          : mcpServerStatus[s.id].status}
+                      </Badge>
+                    )}
                     {isConnected ? (
                       <>
                         <Badge
@@ -578,21 +682,26 @@ export default function ToolsManagerPage({ initialTab = "all" }: ToolsManagerPag
                   <div className="border-t border-border-muted bg-surface-muted/30 px-4 py-3">
                     <div className="text-xs font-medium text-text-muted mb-2">工具明细（{serverTools.length}）</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {serverTools.map(({ id, tool, source }) => (
-                        <ToolCard
-                          key={id}
-                          id={id}
-                          name={getToolDisplayName(id, tool.definition?.name || id)}
-                          description={tool.definition?.description || ""}
-                          source={source}
-                          blocking={tool.blocking}
-                          enabled={toolEnableService.getToolEnabled(id)}
-                          onToggle={() => {
-                            toolEnableService.setToolEnabled(id, !toolEnableService.getToolEnabled(id));
-                            refreshTools();
-                          }}
-                        />
-                      ))}
+                      {serverTools.map(({ id, tool, source }) => {
+                        const enabled = (tool as any)?.enabled ?? toolEnableState[id] ?? true;
+                        return (
+                          <ToolCard
+                            key={id}
+                            id={id}
+                            name={getToolDisplayName(id, tool.definition?.name || id)}
+                            description={tool.definition?.description || ""}
+                            source={source}
+                            blocking={tool.blocking}
+                            enabled={enabled}
+                            onToggle={async () => {
+                              const next = !enabled;
+                              await api.setToolEnabled(id, next);
+                              setToolEnableState((s) => ({ ...s, [id]: next }));
+                              refreshTools();
+                            }}
+                          />
+                        );
+                      })}
                     </div>
                     {serverTools.length === 0 && (
                       <p className="text-sm text-text-muted py-2">

@@ -19,7 +19,7 @@ _cors_middleware = [
     )
 ]
 
-mcp = FastMCP("mcp-notes")
+mcp = FastMCP("mcp-notes", stateless_http=True)
 
 notes: dict[str, dict] = {}
 
