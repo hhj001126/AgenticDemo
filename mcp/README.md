@@ -13,7 +13,7 @@
 | [mcp-notes](./mcp-notes/) | 5203 | http://localhost:5203/mcp | 简易笔记（内存存储） |
 | [mcp-echo](./mcp-echo/) | 5204 | http://localhost:5204/mcp | 回显测试，验证连接 |
 | [mcp-time](./mcp-time/) | 5205 | http://localhost:5205/mcp | 时区、日期差、时间戳 |
-| [youdu_mcp](./youdu_mcp/) | 5206 | http://localhost:5206/mcp | 有度即时通：应用消息、部门、用户、群组、会话 |
+| [mcp-youdu](./mcp-youdu/) | 5206 | http://localhost:5206/mcp | 有度即时通：应用消息、部门、用户、群组、会话 |
 
 ### 启动方式
 

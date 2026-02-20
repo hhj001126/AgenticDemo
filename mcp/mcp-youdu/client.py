@@ -3,7 +3,7 @@ import time
 import json
 import base64
 from typing import Optional, Dict, Any, Literal
-from .crypto import YouduCrypto
+from crypto import YouduCrypto
 
 class YouduClient:
     def __init__(self, api_url: str, bu_id: int, app_id: str, app_key: str):

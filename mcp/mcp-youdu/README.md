@@ -22,14 +22,14 @@ npm run mcp:youdu
 或进入本目录后：
 
 ```bash
-cd mcp/youdu_mcp && uv sync && uv run python -m run.py
+cd mcp/mcp-youdu && uv sync && uv run python -m run.py
 ```
 
 默认 HTTP 端口：**5206**。本服务使用 **SSE 传输**，连接时请使用 **`http://localhost:5206/sse`**（与项目 MCP 后端的 GET + event-stream 方式一致）。
 
 ## 全量功能测试
 
-在 `mcp/youdu_mcp` 下执行（需先配置 `.env`）：
+在 `mcp/mcp-youdu` 下执行（需先配置 `.env`）：
 
 ```bash
 uv run python test_all.py              # 实际请求（只读 + 发送，不含删除）

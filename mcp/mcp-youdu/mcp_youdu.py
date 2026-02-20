@@ -10,7 +10,7 @@ from pathlib import Path
 from fastmcp import FastMCP
 from typing import Dict, List, Optional, Any
 from dotenv import load_dotenv
-from .client import YouduClient
+from client import YouduClient
 
 load_dotenv()
 
